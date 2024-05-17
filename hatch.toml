@@ -2,6 +2,9 @@
 [build]
 dev-mode-dirs = ['src']
 
+[build.targets.wheel]
+packages = ['src/env_config']
+
 
 ## Dependencies
 [metadata.hooks.requirements_txt]

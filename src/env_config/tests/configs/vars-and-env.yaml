@@ -1,0 +1,11 @@
+var:
+  1p-vault: private
+profile:
+  bar:
+    BAZ1: b1
+    BAZ2: b2
+  aws:
+    key: '{var.1p-vault}/key'
+    secret: '{var.1p-vault}/secret'
+  db:
+    password: '{env.DB_PASS}/456'

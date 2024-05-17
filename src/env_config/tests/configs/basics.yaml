@@ -1,0 +1,10 @@
+profile:
+  tng:
+    PICARD: 'captain'
+    RIKER: 'number1'
+  ds9:
+    SISKO: 'depends on season'
+group:
+  starfleet:
+    - ds9
+    - tng

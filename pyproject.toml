@@ -15,9 +15,14 @@ readme = 'readme.md'
 
 
 [project.scripts]
-'env-config' = 'env_config.cli:main'
+env-config = 'env_config.cli:main'
+env-config-shell = 'env_config.cli:env_config_shell'
 
+[tool.hatch.metadata.hooks.requirements_txt]
+files = ['requirements/base.txt']
+
+[tool.hatch.metadata.hooks.requirements_txt.optional-dependencies]
+dev = ['requirements/dev.txt']
 
 [tool.reqs]
-
 sync_pipx = true
