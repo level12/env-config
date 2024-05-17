@@ -1,0 +1,23 @@
+[build-system]
+requires = [
+    'hatchling',
+    'hatch-requirements-txt',
+    'hatch-regex-commit',
+]
+build-backend = 'hatchling.build'
+
+
+[project]
+name = 'env-config-cli'
+authors = [{name = 'Randy Syring', email = 'randy.syring@level12.io'}]
+dynamic = ['dependencies', 'optional-dependencies', 'version']
+readme = 'readme.md'
+
+
+[project.scripts]
+'env-config' = 'env_config.cli:main'
+
+
+[tool.reqs]
+
+sync_pipx = true
