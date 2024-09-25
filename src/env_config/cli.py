@@ -5,7 +5,7 @@ import sys
 import click
 
 from . import config
-from .core import FishEnvConfig
+from .core import BashEnvConfig, FishEnvConfig
 
 
 ENVVAR_PREFIX = 'ENV_CONFIG'
@@ -62,13 +62,10 @@ def env_config(
     is_clear: bool,
     list_profiles: bool,
 ):
-    assert shell == 'fish', 'Bash support needs to be added'
-
     start_at = config_fpath or Path.cwd()
     conf = config.load(start_at)
 
-    # TODO: choose fish or bash
-    envconf = FishEnvConfig(conf)
+    envconf = FishEnvConfig(conf) if shell == 'fish' else BashEnvConfig(conf)
 
     if list_profiles:
         print('Profiles:\n    ', end='')
@@ -91,7 +88,7 @@ def env_config(
         if present_vars:
             print_err('    ', ', '.join(present_vars))
         else:
-            print_err('    ', 'No conigured vars present to clear.')
+            print_err('    ', 'No configured vars present to clear.')
         if not is_debug:
             envconf.clear_present_env_vars()
 
@@ -112,9 +109,8 @@ def env_config(
 
 
 @click.command()
-@click.argument('shell', type=click.Choice(('fish',)))
+@click.argument('shell', type=click.Choice(('fish', 'bash')))
 def env_config_shell(shell):
-    # TODO: add bash support
     fname = f'init.{shell}'
     config_fpath = Path(__file__).parent.parent.parent.joinpath('shells', fname)
     print(config_fpath.read_text())

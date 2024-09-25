@@ -64,7 +64,7 @@ set -gx RIKER number1
 
         expect_stderr = """
 Clearing:
-     No conigured vars present to clear.
+     No configured vars present to clear.
 Profiles active: tng
 Setting:
     PICARD: captain

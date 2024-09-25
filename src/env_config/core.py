@@ -157,3 +157,20 @@ class FishEnvConfig(EnvConfig):
             # Fish puts sourced variables in their own local scope by default so use -g to get them
             # to the scope of the sourcing shell and -x to export them.
             print('set', '-gx', shlex.quote(var), shlex.quote(value))
+
+
+class BashEnvConfig(EnvConfig):
+    def clear_present_env_vars(self):
+        var_names = sorted(self.present_env_vars())
+        if not var_names:
+            return
+
+        print('# BASH SOURCE')
+        for var_name in var_names:
+            print('unset', shlex.quote(var_name))
+
+    def set(self, selected_names: list[str]):
+        print('# BASH SOURCE')
+        print('export', '_ENV_CONFIG_PROFILES=' + shlex.quote(' '.join(selected_names)))
+        for var, value in self.resolve(selected_names).items():
+            print('export', shlex.quote(var) + '=' + shlex.quote(value))
