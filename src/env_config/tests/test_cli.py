@@ -51,7 +51,6 @@ class TestEnvConfig:
             env['ENV_CONFIG_SHELL'] = shell
 
         result = invoke(config_fname, *args, env=env, exit_code=exit_code)
-        print(result.stdout, result.stderr)
         assert result.stdout.strip() == expect_stdout.strip()
         if expect_stderr is not None:
             assert result.stderr.strip() == expect_stderr.strip()

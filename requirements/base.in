@@ -5,3 +5,6 @@ pytest-cov
 # App specific (ditto)
 click
 dynamic-yaml
+
+# Tests
+pexpect

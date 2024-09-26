@@ -117,7 +117,7 @@ def env_config(
 @click.argument('shell', type=click.Choice(('fish', 'bash')))
 def env_config_shell(shell):
     fname = f'init.{shell}'
-    config_fpath = Path(__file__).parent.parent.parent.joinpath('shells', fname)
+    config_fpath = Path(__file__).parent.joinpath('shells', fname)
     print(config_fpath.read_text())
 
 
