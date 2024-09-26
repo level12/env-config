@@ -4,6 +4,8 @@ from pathlib import Path
 import dynamic_yaml
 from dynamic_yaml.yaml_wrappers import YamlDict
 
+from . import core
+
 
 AWS_VAULT_VARS = (
     'AWS_ACCESS_KEY_ID',
@@ -33,11 +35,10 @@ def load(start_at: Path):
     elif start_at.suffix == '.yaml':
         config_fpath = start_at
     else:
-        raise Exception(f'{start_at} should be a directory or .yaml file')
+        raise core.UserError(f'{start_at} should be a directory or .yaml file')
 
     if config_fpath is None:
-        relative_path = start_at.relative_to(Path.cwd())
-        raise Exception(f'No env-config.yaml in {relative_path} or parents')
+        raise core.UserError(f'No env-config.yaml in {start_at} or parents')
 
     with config_fpath.open() as fo:
         config = dynamic_yaml.load(fo)

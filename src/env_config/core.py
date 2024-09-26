@@ -6,10 +6,14 @@ import subprocess
 
 from dynamic_yaml.yaml_wrappers import YamlDict
 
-from .config import AWS_VAULT_VARS
+from . import config
 
 
 log = logging.getLogger(__name__)
+
+
+class UserError(RuntimeError):
+    pass
 
 
 def sub_run(*args, **kwargs):
@@ -46,7 +50,7 @@ class AWSVaultResolver:
     def vault_env(cls, profile):
         # Custom environment for aws-vault exec because it warns against nesting sessions.
         env = environ.copy()
-        for varname in AWS_VAULT_VARS:
+        for varname in config.AWS_VAULT_VARS:
             if varname in env:
                 del env[varname]
 
@@ -61,7 +65,7 @@ class AWSVaultResolver:
                 cls.prompt,
                 '--',
                 'printenv',
-                *AWS_VAULT_VARS,
+                *config.AWS_VAULT_VARS,
                 capture_output=True,
                 env=env,
             )
@@ -71,7 +75,7 @@ class AWSVaultResolver:
             raise
 
         values = result.stdout.decode('utf-8').strip().splitlines()
-        return {key: values[i] for i, key in enumerate(AWS_VAULT_VARS)}
+        return {key: values[i] for i, key in enumerate(config.AWS_VAULT_VARS)}
 
 
 class EnvConfig:
@@ -150,6 +154,8 @@ class FishEnvConfig(EnvConfig):
         for var_name in var_names:
             print('set', '-eg', shlex.quote(var_name))
 
+        print('set', '-eg', '_ENV_CONFIG_PROFILES')
+
     def set(self, selected_names: list[str]):
         print('# FISH SOURCE')
         print('set', '-gx', '_ENV_CONFIG_PROFILES', shlex.quote(' '.join(selected_names)))
@@ -168,6 +174,8 @@ class BashEnvConfig(EnvConfig):
         print('# BASH SOURCE')
         for var_name in var_names:
             print('unset', shlex.quote(var_name))
+
+        print('unset', '_ENV_CONFIG_PROFILES')
 
     def set(self, selected_names: list[str]):
         print('# BASH SOURCE')

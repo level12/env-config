@@ -5,7 +5,7 @@ import sys
 import click
 
 from . import config
-from .core import BashEnvConfig, FishEnvConfig
+from .core import BashEnvConfig, FishEnvConfig, UserError
 
 
 ENVVAR_PREFIX = 'ENV_CONFIG'
@@ -53,7 +53,9 @@ def print_err(*args, **kwargs):
     is_flag=True,
     help='List profile and group names in config',
 )
+@click.pass_context
 def env_config(
+    ctx: click.Context,
     shell: str,
     profiles: list[str],
     config_fpath: Path | None,
@@ -62,50 +64,53 @@ def env_config(
     is_clear: bool,
     list_profiles: bool,
 ):
-    start_at = config_fpath or Path.cwd()
-    conf = config.load(start_at)
+    try:
+        start_at = config_fpath or Path.cwd()
+        conf = config.load(start_at)
 
-    envconf = FishEnvConfig(conf) if shell == 'fish' else BashEnvConfig(conf)
+        envconf = FishEnvConfig(conf) if shell == 'fish' else BashEnvConfig(conf)
 
-    if list_profiles:
-        print('Profiles:\n    ', end='')
-        print('\n    '.join(conf.profile))
-        print('Groups:\n    ', end='')
-        print('\n    '.join(conf.group))
-        return
-
-    is_show = False
-    if not is_clear and len(profiles) == 0:
-        is_show = True
-        profiles = environ.get('_ENV_CONFIG_PROFILES', '').strip().split()
-        if not profiles:
-            print_err('No env-config profiles currently in use.')
+        if list_profiles:
+            print('Profiles:\n    ', end='')
+            print('\n    '.join(conf.profile))
+            print('Groups:\n    ', end='')
+            print('\n    '.join(conf.group))
             return
 
-    if not is_update and not is_show:
-        present_vars = sorted(envconf.present_env_vars())
-        print_err('Clearing:')
-        if present_vars:
-            print_err('    ', ', '.join(present_vars))
-        else:
-            print_err('    ', 'No configured vars present to clear.')
-        if not is_debug:
-            envconf.clear_present_env_vars()
+        is_show = False
+        if not is_clear and len(profiles) == 0:
+            is_show = True
+            profiles = environ.get('_ENV_CONFIG_PROFILES', '').strip().split()
+            if not profiles:
+                print_err('No env-config profiles currently in use.')
+                return
 
-    if is_clear:
-        return
+        if not is_update and not is_show:
+            present_vars = sorted(envconf.present_env_vars())
+            print_err('Clearing:')
+            if present_vars:
+                print_err('    ', ', '.join(present_vars))
+            else:
+                print_err('    ', 'No configured vars present to clear.')
+            if not is_debug:
+                envconf.clear_present_env_vars()
 
-    print_err('Profiles active:', ' '.join(profiles))
-    print_err(
-        'Active profile(s) configuration:' if is_show else 'Setting:',
-    )
-    for var, value in envconf.select(profiles).items():
-        # Print to stderr for the user to see what's happening and keep stdout for the shell to
-        # source
-        print_err(f'    {var}:', value)
+        if is_clear:
+            return
 
-    if not is_debug and not is_show:
-        envconf.set(profiles)
+        print_err('Profiles active:', ' '.join(profiles))
+        print_err(
+            'Active profile(s) configuration:' if is_show else 'Setting:',
+        )
+        for var, value in envconf.select(profiles).items():
+            # Print to stderr for the user to see what's happening and keep stdout for the shell to
+            # source
+            print_err(f'    {var}:', value)
+
+        if not is_debug and not is_show:
+            envconf.set(profiles)
+    except UserError as e:
+        ctx.fail(str(e))
 
 
 @click.command()

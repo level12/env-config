@@ -16,7 +16,7 @@ def invoke_shell(*args, **kwargs) -> Result:
     return result
 
 
-def invoke(config_fname, *args, **kwargs) -> Result:
+def invoke(config_fname, *args, exit_code=0, **kwargs) -> Result:
     kwargs.setdefault('catch_exceptions', False)
     kwargs.setdefault('auto_envvar_prefix', ENVVAR_PREFIX)
 
@@ -26,7 +26,7 @@ def invoke(config_fname, *args, **kwargs) -> Result:
     runner = CliRunner(mix_stderr=False)
     result = runner.invoke(env_config, args, **kwargs)
 
-    assert result.exit_code == 0, (result.stdout, result.stderr)
+    assert result.exit_code == exit_code, (result.stdout, result.stderr)
     return result
 
 
@@ -44,15 +44,19 @@ class TestEnvConfig:
         expect_stdout,
         expect_stderr=None,
         shell='fish',
+        exit_code=0,
         **env,
     ):
         if shell is not None:
             env['ENV_CONFIG_SHELL'] = shell
 
-        result = invoke(config_fname, *args, env=env)
+        result = invoke(config_fname, *args, env=env, exit_code=exit_code)
+        print(result.stdout, result.stderr)
         assert result.stdout.strip() == expect_stdout.strip()
-        if expect_stderr:
+        if expect_stderr is not None:
             assert result.stderr.strip() == expect_stderr.strip()
+
+        return result
 
     def test_fish_basics(self):
         expect_stdout = """
@@ -87,6 +91,7 @@ Setting:
 # FISH SOURCE
 set -eg RIKER
 set -eg SISKO
+set -eg _ENV_CONFIG_PROFILES
 # FISH SOURCE
 set -gx _ENV_CONFIG_PROFILES tng
 set -gx PICARD captain
@@ -182,4 +187,29 @@ Active profile(s) configuration:
             expect_stdout='',
             expect_stderr=expect_stderr,
             _ENV_CONFIG_PROFILES='tng ds9',
+        )
+
+    def test_user_error_doesnt_raise(self):
+        result = self.check_invoke(
+            'fake.not-yaml',
+            exit_code=2,
+            expect_stdout='',
+        )
+        error = result.stderr.strip()
+        assert error.startswith('Usage: env-config')
+        assert error.endswith('/fake.not-yaml should be a directory or .yaml file')
+
+    def test_bash_exports(self):
+        expect_stdout = """
+# BASH SOURCE
+export _ENV_CONFIG_PROFILES=tng
+export PICARD=captain
+export RIKER=number1
+"""
+
+        self.check_invoke(
+            'basics.yaml',
+            'tng',
+            shell='bash',
+            expect_stdout=expect_stdout,
         )

@@ -1,7 +1,9 @@
 from pathlib import Path
 from unittest import mock
 
-from env_config import config
+import pytest
+
+from env_config import config, core
 
 
 configs = Path(__file__).parent / 'configs'
@@ -42,3 +44,15 @@ class TestConfig:
             'AWS_VAULT': 'aws-vault://level12/AWS_VAULT',
             'AWS_SESSION_EXPIRATION': 'aws-vault://level12/AWS_SESSION_EXPIRATION',
         }
+
+    def test_no_config(self):
+        with pytest.raises(core.UserError) as info:
+            config.load(Path('/tmp'))
+
+        assert str(info.value) == 'No env-config.yaml in /tmp or parents'
+
+    def test_invalid_suffix(self):
+        with pytest.raises(core.UserError) as info:
+            config.load(Path('/tmp/fake.py'))
+
+        assert str(info.value) == '/tmp/fake.py should be a directory or .yaml file'
