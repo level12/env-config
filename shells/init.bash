@@ -9,8 +9,6 @@ env-config() {
         echo ''
         echo 'Bash: sourced env-config commands from stdout'
     else
-        echo -n "$stdout"
-        echo ''
-        echo 'Did not source commands'
+        echo "$stdout"
     fi
 }
