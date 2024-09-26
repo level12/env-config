@@ -1,11 +1,13 @@
 from os import environ
 from pathlib import Path
+import shutil
 
 import pexpect
 import pytest
 
 
 basics_fpath = Path(__file__).parent / 'configs' / 'basics.yaml'
+fish_installed = shutil.which('fish') is not None
 
 
 class TestBash:
@@ -54,6 +56,7 @@ class TestBash:
         assert bash.before == ''
 
 
+@pytest.mark.skipif(not fish_installed, reason='fish shell is not installed')
 class TestFish:
     @pytest.fixture
     def fish(self, tmp_path):
