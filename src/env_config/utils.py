@@ -7,9 +7,11 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from urllib.parse import unquote
 import uuid
 
 from cryptography.fernet import Fernet
+from furl import furl
 
 
 TMP_DPATH = Path(tempfile.gettempdir()) / 'env-config'
@@ -48,7 +50,15 @@ def sub_run(
 
 
 def op_read(uri: str):
-    return sub_run('op', 'read', '-n', uri, capture=True).stdout
+    parts = furl(uri)
+    segments = parts.path.segments
+    if len(segments) > 1:
+        acct_args = ('--account', parts.host)
+        vault = segments[0]
+        uri = unquote(parts.set(host=vault, path=segments[1:]).url)
+    else:
+        acct_args = ()
+    return sub_run('op', *acct_args, 'read', '-n', uri, capture=True).stdout
 
 
 def machine_ident():

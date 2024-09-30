@@ -27,8 +27,7 @@ class OPResolver(Resolver):
 
     @staticmethod
     def convert(uri: str) -> bool:
-        result = utils.sub_run('op', 'read', '-n', uri, capture=True)
-        return result.stdout
+        return utils.op_read(uri)
 
 
 class EnvConfig:

@@ -2,6 +2,7 @@ from pathlib import Path
 from unittest import mock
 
 from env_config import config, core
+from env_config.libs.testing import patch_obj
 
 
 configs = Path(__file__).parent / 'configs'
@@ -81,10 +82,18 @@ class TestEnvConfig:
                 'SISKO',
             }
 
-    @mock.patch.object(core.OPResolver, attribute='convert', return_value='foo secret')
+    @patch_obj(core.OPResolver, attribute='convert', return_value='foo secret')
     def test_resolve_1pass(self, m_convert):
         ec = load('1pass.yaml')
         assert ec.resolve(['tng']) == {
             'PICARD': 'captain',
             'RIKER': 'foo secret',
         }
+
+
+class TestOPResolver:
+    @patch_obj(core.utils, 'op_read', return_value='Q')
+    def test_op_call(self, m_op_read):
+        assert core.OPResolver.convert('op://Private/god-like-misanthrope') == 'Q'
+
+        m_op_read.assert_called_once_with('op://Private/god-like-misanthrope')

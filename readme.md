@@ -78,6 +78,17 @@ Any values that start with 'op://' will be treated as 1Password secret reference
 the 1Password `op` cli tool.  EC assumes that binary is on the PATH if "op" references are being
 used.
 
+EC extends the 1Password secret reference format to support specifying the account used to lookup
+the secret:
+
+* Normal reference: `op://vault-name/item/field`
+* Extended reference: `op://account-ref/vault-name/item/field`
+  * EC will call `op --account account-ref -n op://vault-name/item/field`
+  * See also `op account list` and `op read --help`
+  * account-ref works best as the short form of the account "URL", i.e. "starfleet.1password.com"
+    would use "starfleet": `op://starfleet/senior-officers/enterprise/self-destruct-code`
+
+
 # Usage Example
 
 Using the `env-config.yaml` entry in this repo:
