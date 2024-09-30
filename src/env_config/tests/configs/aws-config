@@ -1,0 +1,5 @@
+[profile starfleet]
+region = us-east-2
+mfa_serial = arn:aws:iam::123456789:mfa/engineering
+credential_process = env-config-aws starfleet
+credential_source = op://Employee/starfleet-aws/

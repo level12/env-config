@@ -17,6 +17,7 @@ readme = 'readme.md'
 [project.scripts]
 env-config = 'env_config.cli:main'
 env-config-shell = 'env_config.cli:env_config_shell'
+env-config-aws = 'env_config.cli:env_config_aws'
 
 [tool.hatch.metadata.hooks.requirements_txt]
 files = ['requirements/base.txt']

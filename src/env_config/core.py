@@ -1,12 +1,10 @@
-from functools import cache
 import logging
 from os import environ
 import shlex
-import subprocess
 
 from dynamic_yaml.yaml_wrappers import YamlDict
 
-from . import config
+from . import utils
 
 
 log = logging.getLogger(__name__)
@@ -16,70 +14,25 @@ class UserError(RuntimeError):
     pass
 
 
-def sub_run(*args, **kwargs):
-    kwargs.setdefault('check', True)
-    return subprocess.run(args, **kwargs)
+class Resolver:
+    scheme: str
+
+    @classmethod
+    def use(cls, val: str) -> bool:
+        return val and val.startswith(cls.scheme)
 
 
-class OPResolver:
-    @staticmethod
-    def use(val: str) -> bool:
-        return val and val.startswith('op://')
+class OPResolver(Resolver):
+    scheme = 'op://'
 
     @staticmethod
     def convert(uri: str) -> bool:
-        result = sub_run('op', 'read', '-n', uri, capture_output=True)
-        return result.stdout.decode('utf-8')
-
-
-class AWSVaultResolver:
-    duration = environ.get('ENV_CONFIG_AWS_VAULT_DURATION', '1h')
-    prompt = environ.get('ENV_CONFIG_AWS_VAULT_PROMPT', 'zenity')
-
-    @staticmethod
-    def use(val: str) -> bool:
-        return val and val.startswith('aws-vault://')
-
-    @classmethod
-    def convert(cls, uri: str) -> bool:
-        vault_profile, envvar_name = uri.replace('aws-vault://', '', 1).split('/')
-        return cls.vault_env(vault_profile)[envvar_name]
-
-    @classmethod
-    @cache
-    def vault_env(cls, profile):
-        # Custom environment for aws-vault exec because it warns against nesting sessions.
-        env = environ.copy()
-        for varname in config.AWS_VAULT_VARS:
-            if varname in env:
-                del env[varname]
-
-        try:
-            result = sub_run(
-                'aws-vault',
-                'exec',
-                profile,
-                '--duration',
-                cls.duration,
-                '--prompt',
-                cls.prompt,
-                '--',
-                'printenv',
-                *config.AWS_VAULT_VARS,
-                capture_output=True,
-                env=env,
-            )
-        except subprocess.CalledProcessError as e:
-            log.error(f'stdout: {e.stdout}')
-            log.error(f'stderr: {e.stderr}')
-            raise
-
-        values = result.stdout.decode('utf-8').strip().splitlines()
-        return {key: values[i] for i, key in enumerate(config.AWS_VAULT_VARS)}
+        result = utils.sub_run('op', 'read', '-n', uri, capture=True)
+        return result.stdout
 
 
 class EnvConfig:
-    resolvers = (OPResolver, AWSVaultResolver)
+    resolvers = (OPResolver,)
 
     def __init__(self, config: YamlDict):
         self.config: YamlDict = config

@@ -3,8 +3,12 @@ pytest
 pytest-cov
 
 # App specific (ditto)
+boto3
 click
+cryptography
 dynamic-yaml
+msgpack
+pyserde
 
 # Tests
 pexpect

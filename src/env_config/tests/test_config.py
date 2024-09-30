@@ -32,19 +32,6 @@ class TestConfig:
         # From environment
         assert conf.profile.db.password == '123/456'
 
-    @mock.patch.dict(config.environ, {'DB_PASS': '123'})
-    def test_aws_profile(self):
-        conf = config.load(configs / 'aws.yaml')
-
-        assert dict(conf['profile']['aws.level12']) == {
-            'AWS_ACCESS_KEY_ID': 'aws-vault://level12/AWS_ACCESS_KEY_ID',
-            'AWS_SECRET_ACCESS_KEY': 'aws-vault://level12/AWS_SECRET_ACCESS_KEY',
-            'AWS_SESSION_TOKEN': 'aws-vault://level12/AWS_SESSION_TOKEN',
-            'AWS_SECURITY_TOKEN': 'aws-vault://level12/AWS_SECURITY_TOKEN',
-            'AWS_VAULT': 'aws-vault://level12/AWS_VAULT',
-            'AWS_SESSION_EXPIRATION': 'aws-vault://level12/AWS_SESSION_EXPIRATION',
-        }
-
     def test_no_config(self):
         with pytest.raises(core.UserError) as info:
             config.load(Path('/tmp'))

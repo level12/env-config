@@ -7,16 +7,6 @@ from dynamic_yaml.yaml_wrappers import YamlDict
 from . import core
 
 
-AWS_VAULT_VARS = (
-    'AWS_ACCESS_KEY_ID',
-    'AWS_SECRET_ACCESS_KEY',
-    'AWS_SESSION_TOKEN',
-    'AWS_SECURITY_TOKEN',
-    'AWS_VAULT',
-    'AWS_SESSION_EXPIRATION',
-)
-
-
 def find_upwards(d: Path, filename: str):
     root = Path(d.root)
 
@@ -46,11 +36,5 @@ def load(start_at: Path):
     config._collection['env'] = YamlDict(environ)
     config._collection.setdefault('group', {})
     config._collection.setdefault('profile', YamlDict())
-
-    for aws_profile in config.get('aws-vault', ()):
-        profile_name = f'aws.{aws_profile}'
-        config.profile[profile_name] = YamlDict()
-        for varname in AWS_VAULT_VARS:
-            config.profile[profile_name][varname] = f'aws-vault://{aws_profile}/{varname}'
 
     return config

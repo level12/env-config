@@ -1,5 +1,4 @@
 from pathlib import Path
-import subprocess
 from unittest import mock
 
 from env_config import config, core
@@ -89,39 +88,3 @@ class TestEnvConfig:
             'PICARD': 'captain',
             'RIKER': 'foo secret',
         }
-
-    @mock.patch.object(core, 'sub_run')
-    def test_resolve_aws_vault(self, m_sub_run):
-        stdout = b'key-id\naccess-key\nsess-token\nsec-token\nvault\nexpires'
-        m_sub_run.return_value = subprocess.CompletedProcess((), 0, stdout, b'')
-
-        ec = load('aws.yaml')
-        assert ec.resolve(['aws.level12']) == {
-            'AWS_ACCESS_KEY_ID': 'key-id',
-            'AWS_SECRET_ACCESS_KEY': 'access-key',
-            'AWS_SESSION_TOKEN': 'sess-token',
-            'AWS_SECURITY_TOKEN': 'sec-token',
-            'AWS_VAULT': 'vault',
-            'AWS_SESSION_EXPIRATION': 'expires',
-        }
-
-        # called_once is important as it makes sure we are caching the result
-        m_sub_run.assert_called_once_with(
-            'aws-vault',
-            'exec',
-            'level12',
-            '--duration',
-            '1h',
-            '--prompt',
-            'zenity',
-            '--',
-            'printenv',
-            'AWS_ACCESS_KEY_ID',
-            'AWS_SECRET_ACCESS_KEY',
-            'AWS_SESSION_TOKEN',
-            'AWS_SECURITY_TOKEN',
-            'AWS_VAULT',
-            'AWS_SESSION_EXPIRATION',
-            capture_output=True,
-            env=mock.ANY,
-        )

@@ -1,19 +1,31 @@
+import logging
 from os import environ
 from pathlib import Path
 import sys
 
 import click
 
-from . import config
+from . import aws, config, utils
 from .core import BashEnvConfig, FishEnvConfig, UserError
 
 
 ENVVAR_PREFIX = 'ENV_CONFIG'
+log = logging.getLogger(__name__)
 
 
 def print_err(*args, **kwargs):
     # Flush is only needed to get tests to pass, see https://github.com/pallets/click/issues/2682
     print(*args, file=sys.stderr, flush=True, **kwargs)
+
+
+def init_logs():
+    utils.TMP_DPATH.mkdir(exist_ok=True)
+    logging.basicConfig(
+        filename=utils.TMP_DPATH / 'env-config.log',
+        level=logging.INFO,
+        encoding='utf-8',
+        format='%(asctime)s %(module)s %(funcName)s %(message)s',
+    )
 
 
 @click.command()
@@ -119,6 +131,16 @@ def env_config_shell(shell):
     fname = f'init.{shell}'
     config_fpath = Path(__file__).parent.joinpath('shells', fname)
     print(config_fpath.read_text())
+
+
+@click.command()
+@click.argument('aws_profile')
+def env_config_aws(aws_profile: str):
+    init_logs()
+
+    config = aws.profile_config(aws_profile)
+    sess_creds = aws.op_sess_creds(config.op_ref_base, config.mfa_serial)
+    print(sess_creds.cli_json())
 
 
 def main():
