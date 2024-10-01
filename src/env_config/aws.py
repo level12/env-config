@@ -35,7 +35,7 @@ def profile_config(profile, *, config_fpath=None) -> ProfileConfig:
     config.read(aws_config_fpath)
 
     profile_conf = config[f'profile {profile}']
-    op_prefix = profile_conf['credential_source']
+    op_prefix = profile_conf['envconfig_1pass']
 
     return ProfileConfig(profile, op_prefix, profile_conf['mfa_serial'])
 

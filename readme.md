@@ -150,8 +150,8 @@ mfa_serial = arn:aws:iam::12345678910:mfa/1pass-picard
 # When an AWS cli tool or library needs to use this profile, it will call `env-config-aws` exactly
 # as defined here.  EC will then:
 # 1. Read the profile name as an argument and fetch the mfa_serial and
-#    credential_source from this profile.
-# 2. Generate temporary session credentials using the credential_source below
+#    envconfig_1pass from this profile.
+# 2. Generate temporary session credentials using the envconfig_1pass ref below
 # 3. Output those credentials in the format expected by a credential_process to be consumed by AWS
 #    tools/libs.
 credential_process = env-config-aws starfleet
@@ -161,7 +161,7 @@ credential_process = env-config-aws starfleet
 # - access-key-id
 # - secret-access-key
 # and, when using MFA, a one-time password which was created for the mfa_serial listed in this profile
-credential_source = op://Employee/aws-starfleet/
+envconfig_1pass = op://Employee/aws-starfleet/
 ```
 
 That profile can then be used without setting any environment variables:
