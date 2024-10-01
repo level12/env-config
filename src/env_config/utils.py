@@ -52,7 +52,7 @@ def sub_run(
 def op_read(uri: str):
     parts = furl(uri)
     segments = parts.path.segments
-    if len(segments) > 1:
+    if len(segments) > 2:
         acct_args = ('--account', parts.host)
         vault = segments[0]
         uri = unquote(parts.set(host=vault, path=segments[1:]).url)
