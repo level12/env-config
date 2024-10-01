@@ -211,3 +211,10 @@ will automatically refresh them.
 
 To inspect what `env-config-aws` is doing behind the scenes when called by AWS tools/libs, see the
 logs at `/tmp/env-config/env-config.log` or your OS's equivalent.
+
+# Development
+
+- Tests & CI: see `.circle/config.yml`
+- Release
+  - `mise run bump`
+  - See github actions for pypi deploy
