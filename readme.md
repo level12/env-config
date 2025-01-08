@@ -161,7 +161,8 @@ credential_process = env-config-aws starfleet
 # - access-key-id
 # - secret-access-key
 # and, when using MFA, a one-time password which was created for the mfa_serial listed in this profile
-envconfig_1pass = op://Employee/aws-starfleet/
+# Note that the first segment, "starfleet," is translated to an account.
+envconfig_1pass = op://starfleet/Employee/aws-starfleet/
 ```
 
 That profile can then be used without setting any environment variables:
