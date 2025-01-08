@@ -26,7 +26,7 @@ class TestAWS:
         assert auth.mfa_code == '123456'
 
         assert m_op_read.mock_calls == [
-            mock.call('op://Private/aws/Security/one-time password?attribute=otp'),
+            mock.call('op://Private/aws/one-time password?attribute=otp'),
             mock.call('op://Private/aws/access-key-id'),
             mock.call('op://Private/aws/secret-access-key'),
         ]

@@ -57,7 +57,7 @@ def op_auth(op_ref_base: str, mfa_serial: str = ''):
 
     mfa_code = None
     if mfa_serial:
-        op_mfa_ref = f'{op_ref_base}/Security/one-time password?attribute=otp'
+        op_mfa_ref = f'{op_ref_base}/one-time password?attribute=otp'
         mfa_code = utils.op_read(op_mfa_ref)
 
     return AWSAuth(
