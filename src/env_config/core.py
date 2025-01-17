@@ -26,12 +26,20 @@ class OPResolver(Resolver):
     scheme = 'op://'
 
     @staticmethod
-    def convert(uri: str) -> bool:
+    def convert(env_name: str, uri: str) -> bool:
         return utils.op_read(uri)
 
 
+class PromptResolver(Resolver):
+    scheme = 'prompt://'
+
+    @classmethod
+    def convert(cls, env_name: str, uri: str) -> bool:
+        return utils.zenity_secret(env_name)
+
+
 class EnvConfig:
-    resolvers = (OPResolver,)
+    resolvers = (OPResolver, PromptResolver)
 
     def __init__(self, config: YamlDict):
         self.config: YamlDict = config
@@ -91,7 +99,7 @@ class EnvConfig:
             value = env_vars[name]
             for resolver in self.resolvers:
                 if resolver.use(value):
-                    env_vars[name] = resolver.convert(value)
+                    env_vars[name] = resolver.convert(name, value)
 
         return env_vars
 

@@ -120,3 +120,18 @@ def utc_now():
 
 def utc_now_in(**kwargs):
     return utc_now() + dt.timedelta(**kwargs)
+
+
+def zenity_secret(varname: str):
+    result = sub_run(
+        'zenity',
+        '--forms',
+        '--title',
+        'Env Config Prompt Request',
+        '--text',
+        'Set secret value for:',
+        '--add-password',
+        varname,
+        capture=True,
+    )
+    return result.stdout.strip()
