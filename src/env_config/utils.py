@@ -8,7 +8,6 @@ import subprocess
 import sys
 import tempfile
 from urllib.parse import unquote
-import uuid
 
 from cryptography.fernet import Fernet
 from furl import furl
@@ -71,9 +70,7 @@ def machine_ident():
     """
     etc_mid = Path('/etc/machine-id')
     dbus_mid = Path('/var/lib/dbus/machine-id')
-    machine_id = etc_mid.read_text() if etc_mid.exists() else dbus_mid.read_text()
-
-    return str(uuid.getnode()) + machine_id
+    return (etc_mid.read_text() if etc_mid.exists() else dbus_mid.read_text()).strip()
 
 
 class EncryptedTempFile:
@@ -97,7 +94,7 @@ class EncryptedTempFile:
         # sha256 gives us 32 bytes, which is what fernet needs
         id_hash: bytes = hashlib.sha256(enc_key.encode()).digest()
         # b64encode b/c that's how Fernet.generate_key() does it
-        self.fernet_key: str = base64.urlsafe_b64encode(id_hash)
+        self.fernet_key: bytes = base64.urlsafe_b64encode(id_hash)
 
     def save(self, data: bytes) -> None:
         cipher_suite = Fernet(self.fernet_key)
@@ -112,6 +109,9 @@ class EncryptedTempFile:
 
     def exists(self) -> bool:
         return self.fpath.exists()
+
+    def unlink(self) -> None:
+        self.fpath.unlink()
 
 
 def utc_now():
