@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest import mock
 
 from env_config import aws, utils
-from env_config.libs.testing import patch_obj
+from env_config_tests.libs.testing import patch_obj
 
 
 configs = Path(__file__).parent / 'configs'
