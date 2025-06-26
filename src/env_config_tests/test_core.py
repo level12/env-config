@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest import mock
 
 from env_config import config, core
-from env_config.libs.testing import patch_obj
+from env_config_tests.libs.testing import patch_obj
 
 
 configs = Path(__file__).parent / 'configs'
@@ -94,6 +94,6 @@ class TestEnvConfig:
 class TestOPResolver:
     @patch_obj(core.utils, 'op_read', return_value='Q')
     def test_op_call(self, m_op_read):
-        assert core.OPResolver.convert('op://Private/god-like-misanthrope') == 'Q'
+        assert core.OPResolver.convert('foo-env-name', 'op://Private/god-like-misanthrope') == 'Q'
 
         m_op_read.assert_called_once_with('op://Private/god-like-misanthrope')

@@ -1,11 +1,13 @@
-env-config
-==========
+# env-config
+
+[![nox](https://github.com/level12/env-config/actions/workflows/nox.yaml/badge.svg)](https://github.com/level12/env-config/actions/workflows/nox.yaml)
+
 
 env-config (EC) helps manage environment variables in the active shell as defined by an
 `env-config.yaml` configuration file.  It has built-in support for reading secrets from 1Password.
 
 
-# Install
+## Install
 
 Intended to be installed from source directory or GitHub URl with pipx or [uv
 tools](https://docs.astral.sh/uv/guides/tools/#installing-tools).
@@ -13,7 +15,7 @@ tools](https://docs.astral.sh/uv/guides/tools/#installing-tools).
 When developing, use [reqs](../reqs-pkg/), and `reqs sync` will install an editable version using
 pipx.
 
-## Shell Activation
+### Shell Activation
 
 This assumes that you have your PATH setup to include pipx/uv-tools installed bins:
 
@@ -29,7 +31,7 @@ Fish:
 echo 'env-config-shell fish | source' >> ~/.config/fish/config.fish
 ```
 
-# Configuration
+## Configuration
 
 In the project/app add a `env-config.yaml` configuration file.  Example:
 
@@ -72,7 +74,7 @@ group:
     - sf-prod
 ```
 
-## 1Pass support
+### 1Pass support
 
 Any values that start with 'op://' will be treated as 1Password secret references and resolved using
 the 1Password `op` cli tool.  EC assumes that binary is on the PATH if "op" references are being
@@ -89,7 +91,7 @@ the secret:
     would use "starfleet": `op://starfleet/senior-officers/enterprise/self-destruct-code`
 
 
-# Usage Example
+## Usage Example
 
 Using the `env-config.yaml` entry in this repo:
 
@@ -126,7 +128,7 @@ Fish: sourced env-config commands from stdout
 
 ```
 
-# AWS
+## AWS
 
 It's possible the [AWS 1PassCLI plugin](https://developer.1password.com/docs/cli/shell-plugins/aws)
 is sufficient for your AWS authentication needs.  However, that plugin is designed in such a way
@@ -213,9 +215,51 @@ will automatically refresh them.
 To inspect what `env-config-aws` is doing behind the scenes when called by AWS tools/libs, see the
 logs at `/tmp/env-config/env-config.log` or your OS's equivalent.
 
-# Development
 
-- Tests & CI: see `.circle/config.yml`
-- Release
-  - `mise run bump`
-  - See github actions for pypi deploy
+## Dev
+
+### Copier Template
+
+Project structure and tooling mostly derives from the [Coppy](https://github.com/level12/coppy),
+see its documentation for context and additional instructions.
+
+This project can be updated from the upstream repo, see
+[Updating a Project](https://github.com/level12/coppy?tab=readme-ov-file#updating-a-project).
+
+### Project Setup
+
+From zero to hero (passing tests that is):
+
+1. Ensure [host dependencies](https://github.com/level12/coppy/wiki/Mise) are installed
+
+2. Start docker service dependencies (if applicable):
+
+   `docker compose up -d`
+
+3. Sync [project](https://docs.astral.sh/uv/concepts/projects/) virtualenv w/ lock file:
+
+   `uv sync`
+
+4. Configure pre-commit:
+
+   `pre-commit install`
+
+5. Run tests:
+
+   `nox`
+
+### Versions
+
+Versions are date based.  A `bump` action exists to help manage versions:
+
+```shell
+
+  # Show current version
+  mise bump --show
+
+  # Bump version based on date, tag, and push:
+  mise bump
+
+  # See other options
+  mise bump -- --help
+```

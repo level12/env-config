@@ -1,10 +1,19 @@
-# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: v0.20240517.2-1-g40ca1f0
+# Changes here will be overwritten by Copier
+#
+# Updating `_src` could be helpful, see notes at:
+# https://github.com/level12/coppy/wiki#creating-a-project
+#
+# Otherwise, NEVER EDIT MANUALLY
+_commit: v1.20250622.1
 _src_path: gh:level12/copier-py-package
 author_email: randy.syring@level12.io
 author_name: Randy Syring
+gh_org: level12
+gh_repo: env-config
+hatch_version_tag_sign: true
 project_name: env-config-cli
 py_module: env_config
 python_version: '3.12'
 script_name: env-config
-use_pipx: true
+use_circleci: false
+use_gh_nox: true

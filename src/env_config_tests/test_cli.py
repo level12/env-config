@@ -23,7 +23,7 @@ def invoke(config_fname, *args, exit_code=0, **kwargs) -> Result:
     config_fpath = configs.joinpath(config_fname).as_posix()
     args = ('--config', config_fpath, *args)
 
-    runner = CliRunner(mix_stderr=False)
+    runner = CliRunner()
     result = runner.invoke(env_config, args, **kwargs)
 
     assert result.exit_code == exit_code, (result.stdout, result.stderr)

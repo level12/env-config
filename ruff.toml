@@ -1,5 +1,6 @@
 line-length = 100
 target-version = 'py312'
+output-format = 'concise'
 
 [format]
 line-ending = 'lf'
@@ -8,21 +9,22 @@ quote-style = 'single'
 
 [lint]
 fixable = [
-    'I',
-    'Q',
     'C4',
     'COM',
+    'I',
+    'ISC',
+    'PIE',
+    'Q',
     'UP',
-    'PIE790',  # Unnecessary pass statement
-    'W291',    # Trailing whitespace
-    'W293',    # Blank line contains whitespace
-    'RUF100',  # Unused blanket noqa directive
+
     'E711',    # Comparison to `None` should be `cond is None`
     'E712',    # Comparison to `True` should be `cond is True` or `if cond:`
     'E713',    # Test for membership should be `not in`
     'E714',    # Test for object identity should be `is not`
     'F901',    # `raise NotImplemented` should be `raise NotImplementedError`
-    'ISC',     # Implicit str concat
+    'RUF100',  # Unused blanket noqa directive
+    'W291',    # Trailing whitespace
+    'W293',    # Blank line contains whitespace
 ]
 select = [
     'E',   # ruff default: pycodestyle errors
@@ -50,14 +52,32 @@ select = [
 ignore = [
     'A003',    # Class attribute is shadowing a Python builtin
     'E731',    # Do not assign a `lambda` expression, use a `def`
+
+    # Rules that conflict with the formatter.  See:
+    #
+    #  * https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+    #  * https://github.com/level12/coppy/issues/13
+    #
+    # These are all redundant when the formatter is being used
+    'W191',    # tab-indentation
+    'E111',    # indentation-with-invalid-multiple
+    'E114',    # indentation-with-invalid-multiple-comment
+    'E117',    # over-indented
+    'D206',    # indent-with-spaces
+    'D300',    # triple-single-quotes
+    'Q000',    # bad-quotes-inline-string
+    'Q001',    # bad-quotes-multiline-string
+    'Q002',    # bad-quotes-docstring
+    'Q003',    # avoidable-escaped-quote
 ]
 
-# [per-file-ignores]
-# 'mu/cli/__init__.py' = ['F401', 'I001']
+
+[lint.per-file-ignores]
+'tasks/*.py' = ['EXE003']
 
 
 [lint.flake8-builtins]
-builtins-ignorelist = ['id', 'help', 'compile']
+ignorelist = ['id', 'help', 'compile']
 
 
 [lint.flake8-quotes]
@@ -69,4 +89,4 @@ inline-quotes = 'single'
 [lint.isort]
 lines-after-imports = 2
 force-sort-within-sections = true
-known-first-party = ['tasks_lib']
+known-first-party = ['env_config_tasks_lib']
