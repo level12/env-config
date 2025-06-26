@@ -1,6 +1,6 @@
 # env-config
-
 [![nox](https://github.com/level12/env-config/actions/workflows/nox.yaml/badge.svg)](https://github.com/level12/env-config/actions/workflows/nox.yaml)
+[![pypi](https://img.shields.io/pypi/v/env-config-cli)](https://pypi.org/project/env-config-cli/)
 
 
 env-config (EC) helps manage environment variables in the active shell as defined by an
@@ -9,11 +9,17 @@ env-config (EC) helps manage environment variables in the active shell as define
 
 ## Install
 
-Intended to be installed from source directory or GitHub URl with pipx or [uv
-tools](https://docs.astral.sh/uv/guides/tools/#installing-tools).
+We recommend using this as a [uv tool](https://docs.astral.sh/uv/guides/tools/#installing-tools):
 
-When developing, use [reqs](../reqs-pkg/), and `reqs sync` will install an editable version using
-pipx.
+```
+uv tool install env-config-cli
+```
+
+Or, if wanting to link the bins to a local development version, something like:
+
+```
+uv tool install ~/projects/env-config-git-repo/
+```
 
 ### Shell Activation
 
@@ -263,3 +269,8 @@ Versions are date based.  A `bump` action exists to help manage versions:
   # See other options
   mise bump -- --help
 ```
+
+### PyPI Publishing
+
+Happens automatically through a GH action when a version tag is pushed.  So a `mise bump` should
+also publish to PyPI.

@@ -1,0 +1,60 @@
+# Example:
+#  - https://github.com/pallets/flask/blob/main/.github/workflows/tests.yaml
+# TODO:
+# GH release
+# Environment protection
+#  - https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment
+# Separate build & release
+
+name: PyPI publish
+
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+
+jobs:
+  build:
+    name: Build and publish
+
+    runs-on: ubuntu-latest
+
+    # TODO: recommended best practice
+    # environment:
+    #   name: pypi-publish
+    #   url: ....
+
+    permissions:
+      # required for pypa/gh-action-pypi-publish
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # https://docs.astral.sh/uv/guides/integration/github/#setting-up-python
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+        cache-dependency-glob: "uv.lock"
+
+    - name: "Set up Python"
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: "pyproject.toml"
+
+    - name: Python prep & build
+      run: |
+        uv sync --locked
+
+        uv run hatch --version
+
+        echo "Project version: `uv run hatch version`"
+
+        uv run hatch build
+
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
