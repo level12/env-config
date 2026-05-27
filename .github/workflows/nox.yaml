@@ -7,30 +7,43 @@ on:
   pull_request:
   workflow_dispatch:
 
+
 # Limit this workflow to a single run at a time per-branch to avoid wasting worker resources
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+
 jobs:
-  nox:
+  # JOB
+  nox-other:
     runs-on: ubuntu-latest
 
-    # Runs all steps inside this container
-    container:
-      image: ghcr.io/level12/ubuntu-mive:24-3.12
-      options: --user root
-
-    env:
-      UV_LINK_MODE: copy
+    strategy:
+      fail-fast: false
+      matrix:
+        session: [audit, prek]
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: level12/coppy/gh-actions/nox-run@main
+        with:
+          nox-session: ${{ matrix.session }}
 
-      - name: Mark repo as safe for Git
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+  # JOB
+  nox-pytest:
+    runs-on: ubuntu-latest
 
-      - name: Run Tests
-        run: |
-          uv run --only-group nox -- nox
+    # Specifying the permissions block sets anything not-specified to `none` so we have have to
+    # re-specify the default read permission to be able to set the write permission.
+    permissions:
+      contents: read    # For actions/checkout
+      id-token: write   # For codecov OIDC
+
+    steps:
+      - uses: level12/coppy/gh-actions/nox-run@main
+        with:
+          nox-session: pytest
+
+      - uses: codecov/codecov-action@v5
+        with:
+          use_oidc: true

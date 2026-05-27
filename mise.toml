@@ -1,8 +1,33 @@
 [env]
-PROJECT_SLUG = '{{ config_root | basename | slugify }}'
 
-_.python.venv.path = '{% if env.UV_PROJECT_ENVIRONMENT %}{{ env.UV_PROJECT_ENVIRONMENT }}{% else %}.venv{% endif %}'
+############## PYTHON ##############
+
+# Will use a centralized venv if `~/.cache/uv-venvs` exists.  `.venv` otherwise.
+UV_PROJECT_ENVIRONMENT = "{{ exec(command='tasks/mise-uv-init.py', cache_key='uv-proj-env', cache_duration='1h') }}"
+_.python.venv.path = '{{ env.UV_PROJECT_ENVIRONMENT }}'
+
+# Mise will use the Python defined in .python-version to create the venv.
 _.python.venv.create = true
+
+
+# Configure uv to use the mise managed venv's python so that uv doesn't have to walk PATH to find
+# the bin.  That can be problematic if you have another venv or python on the path and uv finds the
+# wrong one.
+UV_PYTHON = "{{ env.UV_PROJECT_ENVIRONMENT }}/bin/python"
+
+[hooks]
+enter = "uv sync"
+
+
+[settings]
+# Have mise get it's Python version from .python-version.  We get two other benefits:
+# 1) uv, apart from mise, will pick the correct python version, and `uv run` and similar can be used
+#   apart from mise.
+#     - NOTE: If you depend on UV_PROJECT_ENVIRONMENT for centralized venv, and mise sets that,
+#       this doesn't help much.  But if you are using .venv, or setting UV_PROJECT_ENVIRONMENT
+#       outside mise, it can be helpful.
+# 2) GitHub's setup-python action can be directed to the .python-version file
+idiomatic_version_file_enable_tools = ["python"]
 
 
 [task_config]
@@ -14,13 +39,16 @@ includes = [
 ################ TASKS #################
 [tasks.pytest-cov]
 description = 'Full pytest run with html coverage report'
-# .coveragerc sets directory to ./tmp/coverage-html
+# .coveragerc sets html output directory to: tmp/coverage-html
+# But coverage only looks for the rc file in the CWD, so start in proj root.
+dir = "{{ config_root }}"
 run = 'pytest --cov --cov-report=html --no-cov-on-fail'
 
 
 [tasks.upgrade-deps]
-description = "Upgrade uv and pre-commit dependencies"
+description = 'Upgrade uv and prek dependencies'
+dir = "{{ config_root }}"
 run = [
     'uv sync --upgrade',
-    'pre-commit autoupdate',
+    'prek auto-update',
 ]

@@ -32,39 +32,27 @@ env-config-aws = 'env_config.cli:env_config_aws'
 
 
 [dependency-groups]
-# Note: keeping Coppy deps grouped separate from app deps should help avoid unnecessary
-# conflicts when upgrading to the latest Coppy template.
 dev = [
-    # From Coppy:
-    {include-group = "tests"},
-    {include-group = "pre-commit"},
+    {include-group = "pytest"},
+    {include-group = "prek"},
     {include-group = "audit"},
     {include-group = "nox"},
     'click',
     'hatch',
     'ruff',
-
-    # App specific:
-    # TODO: fill in app deps here
 ]
 # Used by nox
-tests = [
+pytest = [
     "pexpect>=4.9.0",
-    # From Coppy:
     'pytest',
     'pytest-cov',
-    # App specific:
-    # TODO: fill in app deps here
 ]
 # Used by nox
-pre-commit = [
-    # From Coppy:
-    'pre-commit',
-    'pre-commit-uv',
+prek = [
+    'prek',
 ]
 # Used by nox
 audit = [
-    # From Coppy:
     'pip-audit',
 ]
 # Used by CI

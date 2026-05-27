@@ -6,7 +6,7 @@ omit =
 
 source =
     src/env_config
-    src/env_config_tests
+    tests/env_config_tests
 
 
 [html]
