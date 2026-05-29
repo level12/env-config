@@ -6,12 +6,6 @@ dev-mode-dirs = ['src']
 packages = ['src/env_config']
 
 
-## Env: default
-[envs.default]
-installer = "uv"
-
-
 ## Version
 [version]
-source = 'regex_commit'
 path = 'src/env_config/version.py'

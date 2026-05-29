@@ -6,25 +6,90 @@ Originates from https://github.com/level12/coppy
 Consider updating the source file in that repo with enhancements or bug fixes needed.
 """
 
+from dataclasses import dataclass, field
 import datetime as dt
+from pathlib import Path
+import re
+from typing import Self
 
 import click
 
 from env_config_tasks_lib import sub_run
 
 
-def current_version():
-    result = sub_run('hatch', 'version', capture=True)
-    return result.stdout.strip()
+VERSION_FPATH = Path(__file__).resolve().parents[1] / 'src' / 'env_config' / 'version.py'
+VERSION_RE = re.compile(r"^VERSION = '(?P<version>[^']+)'$", re.MULTILINE)
 
 
-def date_version(current: str):
-    major, _, patch, *_ = current.split('.')
-    version = f'{major}.' + dt.date.today().strftime(r'%Y%m%d')
+@dataclass(frozen=True, slots=True)
+class Version:
+    major: int
+    minor: int
+    patch: int
+    version_fpath: Path = field(default=VERSION_FPATH, compare=False, repr=False)
 
-    patch = int(patch) + 1 if current.startswith(version) else 1
+    def __str__(self) -> str:
+        return f'{self.major}.{self.minor}.{self.patch}'
 
-    return f'{version}.{patch}'
+    @classmethod
+    def parse(cls, value: str, *, version_fpath: Path | None = None) -> Self:
+        version_fpath = version_fpath or VERSION_FPATH
+        major, minor, patch, *_ = value.split('.')
+        return cls(int(major), int(minor), int(patch), version_fpath=version_fpath)
+
+    @classmethod
+    def load(cls, *, version_fpath: Path | None = None) -> Self:
+        version_fpath = version_fpath or VERSION_FPATH
+        text = version_fpath.read_text()
+        if not (match := VERSION_RE.search(text)):
+            raise ValueError(f'Unable to find VERSION in {version_fpath}')
+
+        return cls.parse(match['version'], version_fpath=version_fpath)
+
+    def save(self) -> None:
+        text = self.version_fpath.read_text()
+        text, count = VERSION_RE.subn(f"VERSION = '{self}'", text, count=1)
+        if count != 1:
+            raise ValueError(f'Unable to update VERSION in {self.version_fpath}')
+
+        self.version_fpath.write_text(text)
+
+    def bump(self, kind: str, *, today: dt.date | None = None) -> Self:
+        if kind == 'date':
+            today = today or dt.date.today()
+            minor = int(today.strftime('%Y%m%d'))
+            patch = self.patch + 1 if self.minor == minor else 1
+            return type(self)(self.major, minor, patch, version_fpath=self.version_fpath)
+
+        if kind == 'major':
+            return type(self)(self.major + 1, 0, 0, version_fpath=self.version_fpath)
+
+        if kind == 'minor':
+            return type(self)(self.major, self.minor + 1, 0, version_fpath=self.version_fpath)
+
+        if kind == 'micro':
+            return type(self)(
+                self.major,
+                self.minor,
+                self.patch + 1,
+                version_fpath=self.version_fpath,
+            )
+
+        raise ValueError(f'Unsupported bump kind: {kind}')
+
+
+def current_version(current: str | None) -> Version:
+    if current:
+        return Version.parse(current)
+
+    return Version.load()
+
+
+def save_version(previous: Version, current: Version) -> None:
+    current.save()
+    sub_run('git', 'add', current.version_fpath)
+    sub_run('git', 'commit', '-m', f'Bump version {previous} → {current}')
+    sub_run('git', 'tag', f'v{current}')
 
 
 @click.command()
@@ -33,7 +98,7 @@ def date_version(current: str):
 @click.option('--current', help='Simulate current version (date only)')
 @click.option('--push/--no-push', help='Push after bump', default=True)
 @click.pass_context
-def main(ctx: click.Context, kind: str | None, show: bool, current: str | None, push: bool):
+def main(ctx: click.Context, kind: str, show: bool, current: str | None, push: bool):
     """
     Bump the version and (by default) git push including tags.
 
@@ -50,28 +115,24 @@ def main(ctx: click.Context, kind: str | None, show: bool, current: str | None, 
         Old: 0.20240515.1
         New: 1.0.0
 
-    Major, minor, and micro bumps are just passed through to `hatch version` and provided for
-    completeness.  If using date based versioning only `date` and `major` need to be used.
-
-    Assumes your project is using hatch-regex-commit or similar so that a commit & tag are created
-    automatically after every version bump.
+    Major, minor, and micro bumps are provided for completeness.  If using date based versioning
+    only `date` and `major` need to be used.
     """
     if show and kind != 'date':
         ctx.fail('--show is only valid with date versioning')
     if current and kind != 'date':
         ctx.fail('--current is only valid with date versioning')
 
-    if kind == 'date':
-        current = current or current_version()
-        version = date_version(current)
-        if show:
-            print('Current:', current)
-            print('Next:', version)
-            return
-    else:
-        version = kind
+    previous = Version.load()
+    current_version_ = current_version(current) if kind == 'date' else previous
+    version = current_version_.bump(kind)
 
-    sub_run('hatch', 'version', version)
+    if show:
+        click.echo(f'Current: {current_version_}')
+        click.echo(f'Next: {version}')
+        return
+
+    save_version(previous, version)
     if push:
         sub_run('git', 'push', '--follow-tags')
 

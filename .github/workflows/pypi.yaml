@@ -36,7 +36,7 @@ jobs:
 
     # https://docs.astral.sh/uv/guides/integration/github/#setting-up-python
     - name: Install uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
       with:
         enable-cache: true
         cache-dependency-glob: "uv.lock"
@@ -50,11 +50,7 @@ jobs:
       run: |
         uv sync --locked
 
-        uv run hatch --version
-
-        echo "Project version: `uv run hatch version`"
-
-        uv run hatch build
+        uv run python -m build
 
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1

@@ -37,8 +37,8 @@ dev = [
     {include-group = "prek"},
     {include-group = "audit"},
     {include-group = "nox"},
+    "build>=1.5.0",
     'click',
-    'hatch',
     'ruff',
 ]
 # Used by nox
