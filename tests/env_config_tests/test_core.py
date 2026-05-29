@@ -97,3 +97,87 @@ class TestOPResolver:
         assert core.OPResolver.convert('foo-env-name', 'op://Private/god-like-misanthrope') == 'Q'
 
         m_op_read.assert_called_once_with('op://Private/god-like-misanthrope')
+
+    @patch_obj(core.utils, 'op_read')
+    def test_empty_env_override_is_literal(self, m_op_read):
+        with mock.patch.dict(core.environ, {'CORE_TEST_DEPLOY_KEY': ''}, clear=True):
+            assert core.OPResolver.convert('CORE_TEST_DEPLOY_KEY', 'op://private/deploy/key') == ''
+
+        m_op_read.assert_not_called()
+
+    @patch_obj(core.utils, 'op_read')
+    def test_env_override_beats_systemd_credentials(self, m_op_read, tmp_path):
+        creds_dpath = tmp_path / 'creds'
+        creds_dpath.mkdir()
+        (creds_dpath / 'CORE_TEST_DEPLOY_KEY').write_text('from-creds')
+
+        with mock.patch.dict(
+            core.environ,
+            {
+                'CORE_TEST_DEPLOY_KEY': 'from-env',
+                'CREDENTIALS_DIRECTORY': str(creds_dpath),
+            },
+            clear=True,
+        ):
+            assert core.OPResolver.convert('CORE_TEST_DEPLOY_KEY', 'op://private/deploy/key') == (
+                'from-env'
+            )
+
+        m_op_read.assert_not_called()
+
+    @patch_obj(core.utils, 'op_read')
+    def test_env_override(self, m_op_read):
+        with mock.patch.dict(core.environ, {'CORE_TEST_DEPLOY_KEY': 'from-env'}, clear=True):
+            assert (
+                core.OPResolver.convert('CORE_TEST_DEPLOY_KEY', 'op://private/deploy/key')
+                == 'from-env'
+            )
+
+        m_op_read.assert_not_called()
+
+    @patch_obj(core.utils, 'op_read')
+    def test_systemd_credentials(self, m_op_read, tmp_path):
+        creds_dpath = tmp_path / 'creds'
+        creds_dpath.mkdir()
+        (creds_dpath / 'CORE_TEST_DEPLOY_KEY').write_text('from-creds')
+
+        with mock.patch.dict(core.environ, {'CREDENTIALS_DIRECTORY': str(creds_dpath)}, clear=True):
+            assert core.OPResolver.convert('CORE_TEST_DEPLOY_KEY', 'op://private/deploy/key') == (
+                'from-creds'
+            )
+
+        m_op_read.assert_not_called()
+
+    @patch_obj(core.utils, 'op_read', return_value='from-op')
+    def test_missing_systemd_credential_falls_back_to_uri(self, m_op_read, tmp_path):
+        creds_dpath = tmp_path / 'creds'
+        creds_dpath.mkdir()
+
+        with mock.patch.dict(core.environ, {'CREDENTIALS_DIRECTORY': str(creds_dpath)}, clear=True):
+            assert core.OPResolver.convert('CORE_TEST_DEPLOY_KEY', 'op://private/deploy/key') == (
+                'from-op'
+            )
+
+        m_op_read.assert_called_once_with('op://private/deploy/key')
+
+    @patch_obj(core.utils, 'op_read', return_value='from-op')
+    def test_override_ref(self, m_op_read):
+        with mock.patch.dict(
+            core.environ,
+            {'CORE_TEST_DEPLOY_KEY_1PASS_REF': 'op://override/deploy/key'},
+            clear=True,
+        ):
+            assert core.OPResolver.convert('CORE_TEST_DEPLOY_KEY', 'op://private/deploy/key') == (
+                'from-op'
+            )
+
+        m_op_read.assert_called_once_with('op://override/deploy/key')
+
+    @patch_obj(core.utils, 'op_read', return_value='from-op')
+    def test_empty_override_ref_is_literal(self, m_op_read):
+        with mock.patch.dict(core.environ, {'CORE_TEST_DEPLOY_KEY_1PASS_REF': ''}, clear=True):
+            assert core.OPResolver.convert('CORE_TEST_DEPLOY_KEY', 'op://private/deploy/key') == (
+                'from-op'
+            )
+
+        m_op_read.assert_called_once_with('')

@@ -134,6 +134,44 @@ Fish: sourced env-config commands from stdout
 
 ```
 
+## contrib.loader
+
+A Python application can use `env_config.contrib.loader` to give its code access to the same env
+var loading logic as the `env-config` CLI uses.
+
+Example:
+
+```python
+from pathlib import Path
+
+from env_config.contrib import EnvVar, Loader
+
+
+class EnvVars(Loader):
+    # Using just the env var name if it's unique in the config file.
+    gh_token = EnvVar('GITHUB_TOKEN')
+    # Using a profile or group name as a dotted prefix when needed.
+    jira_token = EnvVar('enterprise.JIRA_TOKEN')
+
+
+env_vars = EnvVars.load(proj_path_root or Path.cwd())
+
+# Access the resolved value.
+github_token = env_vars.gh_token.value
+```
+
+Notes:
+
+- Pass a Path to `Loader.load(...)`; env-config will search upwards from there for
+  `env-config.yaml`.
+- If a profile and group have the same name, the profile wins, matching env-config's normal
+  selection behavior.
+- Unprefixed names search across all profiles. If the same env var exists in more than one
+  profile, loading raises `UserError` and asks you to use a prefix.
+- `Loader.load(...)` eagerly resolves all declared vars so config errors show up immediately.
+  If you want lazy resolution, instantiate your loader subclass directly instead of calling
+  `.load(...)`.
+
 ## AWS
 
 It's possible the [AWS 1PassCLI plugin](https://developer.1password.com/docs/cli/shell-plugins/aws)

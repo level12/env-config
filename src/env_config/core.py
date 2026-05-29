@@ -1,5 +1,6 @@
 import logging
 from os import environ
+from pathlib import Path
 import shlex
 
 from dynamic_yaml.yaml_wrappers import YamlDict
@@ -19,14 +20,32 @@ class Resolver:
 
     @classmethod
     def use(cls, val: str) -> bool:
-        return val and val.startswith(cls.scheme)
+        return bool(val) and val.startswith(cls.scheme)
+
+    @classmethod
+    def convert(cls, env_name: str, uri: str) -> str:
+        raise NotImplementedError
 
 
 class OPResolver(Resolver):
     scheme = 'op://'
 
-    @staticmethod
-    def convert(env_name: str, uri: str) -> bool:
+    @classmethod
+    def convert(cls, env_name: str, uri: str) -> str:
+        # Treat operator-provided env overrides literally, including the empty string.
+        if env_name in environ:
+            return environ[env_name]
+
+        if systemd_creds_dir := environ.get('CREDENTIALS_DIRECTORY'):
+            creds_fpath = Path(systemd_creds_dir) / env_name
+            if creds_fpath.exists():
+                # Don't strip whitespace.  Assume competent operators are not adding whitespace
+                # to their creds accidently.  Even if that proves false, this isn't the place
+                # to fix it.
+                return creds_fpath.read_text()
+
+        # Treat the explicit override ref literally too, including the empty string.
+        uri = environ.get(f'{env_name}_1PASS_REF', uri)
         return utils.op_read(uri)
 
 
@@ -34,7 +53,7 @@ class PromptResolver(Resolver):
     scheme = 'prompt://'
 
     @classmethod
-    def convert(cls, env_name: str, uri: str) -> bool:
+    def convert(cls, env_name: str, uri: str) -> str:
         return utils.zenity_secret(env_name)
 
 
@@ -88,6 +107,15 @@ class EnvConfig:
             for env_name, env_value in env_map.items()
         }
 
+    @classmethod
+    def resolve_value(cls, env_name: str, value: str) -> str:
+        """Apply the first matching resolver or return the raw value unchanged."""
+        for resolver in cls.resolvers:
+            if resolver.use(value):
+                return resolver.convert(env_name, value)
+
+        return value
+
     def resolve(self, selected_names: list[str]):
         """
         Return all env name to value mappings in given selected names after resolving includes and
@@ -96,10 +124,7 @@ class EnvConfig:
         env_vars: dict[str, str] = self.select(selected_names)
 
         for name in env_vars:
-            value = env_vars[name]
-            for resolver in self.resolvers:
-                if resolver.use(value):
-                    env_vars[name] = resolver.convert(name, value)
+            env_vars[name] = self.resolve_value(name, env_vars[name])
 
         return env_vars
 
