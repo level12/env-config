@@ -90,6 +90,13 @@ class TestEnvConfig:
             'RIKER': 'foo secret',
         }
 
+    def test_resolve_yaml_bool(self):
+        ec = load('basics.yaml')
+
+        assert ec.resolve(['aws-cli']) == {
+            'AWS_IGNORE_CONFIGURED_ENDPOINT_URLS': 'true',
+        }
+
 
 class TestOPResolver:
     @patch_obj(core.utils, 'op_read', return_value='Q')

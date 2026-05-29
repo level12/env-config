@@ -4,6 +4,8 @@ profile:
     RIKER: 'number1'
   ds9:
     SISKO: 'depends on season'
+  aws-cli:
+    AWS_IGNORE_CONFIGURED_ENDPOINT_URLS: true
 group:
   starfleet:
     - ds9

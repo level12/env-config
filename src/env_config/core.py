@@ -108,8 +108,11 @@ class EnvConfig:
         }
 
     @classmethod
-    def resolve_value(cls, env_name: str, value: str) -> str:
+    def resolve_value(cls, env_name: str, value: str | bool) -> str:
         """Apply the first matching resolver or return the raw value unchanged."""
+        if isinstance(value, bool):
+            return str(value).lower()
+
         for resolver in cls.resolvers:
             if resolver.use(value):
                 return resolver.convert(env_name, value)
