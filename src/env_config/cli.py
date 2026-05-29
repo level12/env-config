@@ -6,7 +6,7 @@ import sys
 import click
 
 from . import aws, config, utils
-from .core import BashEnvConfig, FishEnvConfig, UserError
+from .core import PROFILES_ENVVAR, BashEnvConfig, FishEnvConfig, UserError
 
 
 ENVVAR_PREFIX = 'ENV_CONFIG'
@@ -92,14 +92,14 @@ def env_config(
         is_show = False
         if not is_clear and len(profiles) == 0:
             is_show = True
-            profiles = environ.get('_ENV_CONFIG_PROFILES', '').strip().split()
+            profiles = environ.get(PROFILES_ENVVAR, '').strip().split()
             if not profiles:
                 print_err('No env-config profiles currently in use.')
                 return
 
         envconf.validate_selected_names(profiles)
 
-        current_profiles = environ.get('_ENV_CONFIG_PROFILES', '').strip().split()
+        current_profiles = environ.get(PROFILES_ENVVAR, '').strip().split()
         active_profiles = profiles
         if is_update and not is_show:
             active_profiles = list(dict.fromkeys([*current_profiles, *profiles]))
@@ -107,6 +107,8 @@ def env_config(
         profiles_to_apply = active_profiles if is_update and not is_show else profiles
 
         if not is_update and not is_show:
+            # If metadata from a previous env-config run is present, core cleanup will prefer that
+            # remembered managed-var list. current_profiles is only used as the fallback scope.
             clear_profiles = None if is_clear else current_profiles
             present_vars = sorted(envconf.present_env_vars(clear_profiles))
             print_err('Clearing:')
@@ -115,7 +117,7 @@ def env_config(
             else:
                 print_err('    ', 'No configured vars present to clear.')
             if not is_debug:
-                envconf.clear_present_env_vars(clear_profiles)
+                envconf.clear_present_env_vars(clear_profiles, clear_metadata=is_clear)
 
         if is_clear:
             return

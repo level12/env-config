@@ -9,6 +9,8 @@ from . import utils
 
 
 log = logging.getLogger(__name__)
+PROFILES_ENVVAR = '_ENV_CONFIG_PROFILES'
+MANAGED_VARS_ENVVAR = '_ENV_CONFIG_VARS'
 
 
 class UserError(RuntimeError):
@@ -80,6 +82,9 @@ class EnvConfig:
     def configured_env_var_names(self) -> set[str]:
         return {var_name for var_map in self.config.profile.values() for var_name in var_map}
 
+    def managed_env_var_names(self) -> set[str]:
+        return set(environ.get(MANAGED_VARS_ENVVAR, '').strip().split())
+
     def selected_configs(self, selected_names: list[str]) -> dict[str, dict]:
         return self.select_groups(selected_names) | self.select_profiles(selected_names)
 
@@ -95,12 +100,15 @@ class EnvConfig:
         }
 
     def present_env_vars(self, selected_names: list[str] | None = None) -> set[str]:
-        """Return configured env var names that are currently present."""
-        env_var_names = (
-            self.selected_env_var_names(selected_names)
-            if selected_names is not None
-            else self.configured_env_var_names()
-        )
+        """Return present env vars, preferring the remembered managed-var list when available."""
+        env_var_names = self.managed_env_var_names()
+        if not env_var_names:
+            env_var_names = (
+                self.selected_env_var_names(selected_names)
+                if selected_names is not None
+                else self.configured_env_var_names()
+            )
+
         return {var_name for var_name in env_var_names if var_name in environ}
 
     def select_groups(self, group_names: list[str]) -> dict[str, dict]:
@@ -159,44 +167,60 @@ class EnvConfig:
 
 
 class FishEnvConfig(EnvConfig):
-    def clear_present_env_vars(self, selected_names: list[str] | None = None):
+    def clear_present_env_vars(
+        self,
+        selected_names: list[str] | None = None,
+        *,
+        clear_metadata: bool = False,
+    ):
         var_names = sorted(self.present_env_vars(selected_names))
-        if not var_names:
+        if not var_names and not clear_metadata:
             return
 
         print('# FISH SOURCE')
         for var_name in var_names:
             print('set', '-eg', shlex.quote(var_name))
 
-        print('set', '-eg', '_ENV_CONFIG_PROFILES')
+        print('set', '-eg', PROFILES_ENVVAR)
+        print('set', '-eg', MANAGED_VARS_ENVVAR)
 
     def set(self, selected_names: list[str], *, active_names: list[str] | None = None):
         active_names = active_names or selected_names
+        env_vars = self.resolve(selected_names)
 
         print('# FISH SOURCE')
-        print('set', '-gx', '_ENV_CONFIG_PROFILES', shlex.quote(' '.join(active_names)))
-        for var, value in self.resolve(selected_names).items():
+        print('set', '-gx', PROFILES_ENVVAR, shlex.quote(' '.join(active_names)))
+        print('set', '-gx', MANAGED_VARS_ENVVAR, shlex.quote(' '.join(sorted(env_vars))))
+        for var, value in env_vars.items():
             # Fish puts sourced variables in their own local scope by default so use -g to get them
             # to the scope of the sourcing shell and -x to export them.
             print('set', '-gx', shlex.quote(var), shlex.quote(value))
 
 
 class BashEnvConfig(EnvConfig):
-    def clear_present_env_vars(self, selected_names: list[str] | None = None):
+    def clear_present_env_vars(
+        self,
+        selected_names: list[str] | None = None,
+        *,
+        clear_metadata: bool = False,
+    ):
         var_names = sorted(self.present_env_vars(selected_names))
-        if not var_names:
+        if not var_names and not clear_metadata:
             return
 
         print('# BASH SOURCE')
         for var_name in var_names:
             print('unset', shlex.quote(var_name))
 
-        print('unset', '_ENV_CONFIG_PROFILES')
+        print('unset', PROFILES_ENVVAR)
+        print('unset', MANAGED_VARS_ENVVAR)
 
     def set(self, selected_names: list[str], *, active_names: list[str] | None = None):
         active_names = active_names or selected_names
+        env_vars = self.resolve(selected_names)
 
         print('# BASH SOURCE')
-        print('export', '_ENV_CONFIG_PROFILES=' + shlex.quote(' '.join(active_names)))
-        for var, value in self.resolve(selected_names).items():
+        print('export', PROFILES_ENVVAR + '=' + shlex.quote(' '.join(active_names)))
+        print('export', MANAGED_VARS_ENVVAR + '=' + shlex.quote(' '.join(sorted(env_vars))))
+        for var, value in env_vars.items():
             print('export', shlex.quote(var) + '=' + shlex.quote(value))

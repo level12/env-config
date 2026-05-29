@@ -82,6 +82,22 @@ class TestEnvConfig:
                 'SISKO',
             }
 
+    def test_present_env_vars_prefers_managed_var_list(self):
+        ec = load('basics.yaml')
+        with mock.patch.dict(
+            core.environ,
+            {
+                core.MANAGED_VARS_ENVVAR: 'FOO GHOST',
+                'FOO': 'one',
+                'SISKO': 'foo',
+            },
+            clear=True,
+        ):
+            assert ec.managed_env_var_names() == {'FOO', 'GHOST'}
+            assert ec.present_env_vars(['ds9']) == {
+                'FOO',
+            }
+
     @patch_obj(core.OPResolver, attribute='convert', return_value='foo secret')
     def test_resolve_1pass(self, m_convert):
         ec = load('1pass.yaml')

@@ -61,6 +61,7 @@ class TestEnvConfig:
         expect_stdout = """
 # FISH SOURCE
 set -gx _ENV_CONFIG_PROFILES tng
+set -gx _ENV_CONFIG_VARS 'PICARD RIKER'
 set -gx PICARD captain
 set -gx RIKER number1
 """
@@ -91,8 +92,10 @@ Setting:
 set -eg RIKER
 set -eg SISKO
 set -eg _ENV_CONFIG_PROFILES
+set -eg _ENV_CONFIG_VARS
 # FISH SOURCE
 set -gx _ENV_CONFIG_PROFILES tng
+set -gx _ENV_CONFIG_VARS 'PICARD RIKER'
 set -gx PICARD captain
 set -gx RIKER number1
 """
@@ -131,6 +134,7 @@ Setting:
         expect_stdout = """
 # FISH SOURCE
 set -gx _ENV_CONFIG_PROFILES tng
+set -gx _ENV_CONFIG_VARS 'PICARD RIKER'
 set -gx PICARD captain
 set -gx RIKER number1
 """
@@ -159,8 +163,10 @@ Setting:
 set -eg AWS_ACCESS_KEY_ID
 set -eg AWS_SECRET_ACCESS_KEY
 set -eg _ENV_CONFIG_PROFILES
+set -eg _ENV_CONFIG_VARS
 # FISH SOURCE
 set -gx _ENV_CONFIG_PROFILES tng
+set -gx _ENV_CONFIG_VARS 'PICARD RIKER'
 set -gx PICARD captain
 set -gx RIKER number1
 """
@@ -184,10 +190,129 @@ Setting:
             AWS_SECRET_ACCESS_KEY='from-prev-ec',
         )
 
+    def test_switch_clears_vars_removed_from_the_same_profile(self, tmp_path):
+        config_fpath = tmp_path / 'env-config.yaml'
+        config_fpath.write_text(
+            """profile:
+  demo:
+    FOO: one
+""",
+        )
+
+        runner = CliRunner()
+        first_result = runner.invoke(
+            env_config,
+            ('--config', config_fpath.as_posix(), '--shell', 'bash', 'demo'),
+            catch_exceptions=False,
+            auto_envvar_prefix=ENVVAR_PREFIX,
+        )
+
+        assert first_result.exit_code == 0, (first_result.stdout, first_result.stderr)
+        assert (
+            first_result.stdout.strip()
+            == """
+# BASH SOURCE
+export _ENV_CONFIG_PROFILES=demo
+export _ENV_CONFIG_VARS=FOO
+export FOO=one
+""".strip()
+        )
+
+        config_fpath.write_text(
+            """profile:
+  demo:
+    BAR: two
+""",
+        )
+
+        second_result = runner.invoke(
+            env_config,
+            ('--config', config_fpath.as_posix(), '--shell', 'bash', 'demo'),
+            catch_exceptions=False,
+            auto_envvar_prefix=ENVVAR_PREFIX,
+            env={
+                '_ENV_CONFIG_PROFILES': 'demo',
+                '_ENV_CONFIG_VARS': 'FOO',
+                'FOO': 'one',
+            },
+        )
+
+        assert second_result.exit_code == 0, (second_result.stdout, second_result.stderr)
+        assert (
+            second_result.stderr.strip()
+            == """
+Clearing:
+     FOO
+Profiles active: demo
+Setting:
+    BAR: two
+""".strip()
+        )
+        assert (
+            second_result.stdout.strip()
+            == """
+# BASH SOURCE
+unset FOO
+unset _ENV_CONFIG_PROFILES
+unset _ENV_CONFIG_VARS
+# BASH SOURCE
+export _ENV_CONFIG_PROFILES=demo
+export _ENV_CONFIG_VARS=BAR
+export BAR=two
+""".strip()
+        )
+
+    def test_clear_uses_managed_var_list(self):
+        expect_stdout = """
+# BASH SOURCE
+unset FOO
+unset _ENV_CONFIG_PROFILES
+unset _ENV_CONFIG_VARS
+"""
+
+        expect_stderr = """
+Clearing:
+     FOO
+"""
+
+        self.check_invoke(
+            'basics.yaml',
+            '--clear',
+            shell='bash',
+            expect_stdout=expect_stdout,
+            expect_stderr=expect_stderr,
+            _ENV_CONFIG_PROFILES='demo',
+            _ENV_CONFIG_VARS='FOO',
+            FOO='one',
+        )
+
+    def test_clear_unsets_metadata_when_no_managed_vars_are_present(self):
+        expect_stdout = """
+# BASH SOURCE
+unset _ENV_CONFIG_PROFILES
+unset _ENV_CONFIG_VARS
+"""
+
+        expect_stderr = """
+Clearing:
+     No configured vars present to clear.
+"""
+
+        self.check_invoke(
+            'basics.yaml',
+            '--clear',
+            shell='bash',
+            expect_stdout=expect_stdout,
+            expect_stderr=expect_stderr,
+            _ENV_CONFIG_PROFILES='demo',
+            _ENV_CONFIG_VARS='FOO',
+        )
+
     def test_update(self):
         expect_stdout = """
 # FISH SOURCE
 set -gx _ENV_CONFIG_PROFILES tng
+set -gx _ENV_CONFIG_VARS 'PICARD RIKER'
 set -gx PICARD captain
 set -gx RIKER number1
 """
@@ -213,6 +338,7 @@ Setting:
         expect_stdout = """
 # FISH SOURCE
 set -gx _ENV_CONFIG_PROFILES 'ds9 tng'
+set -gx _ENV_CONFIG_VARS 'PICARD RIKER SISKO'
 set -gx PICARD captain
 set -gx RIKER number1
 set -gx SISKO 'depends on season'
@@ -239,6 +365,7 @@ Setting:
         expect_stdout = """
 # FISH SOURCE
 set -gx _ENV_CONFIG_PROFILES 'ds9 tng'
+set -gx _ENV_CONFIG_VARS 'PICARD RIKER SISKO'
 set -gx PICARD captain
 set -gx RIKER number1
 set -gx SISKO 'depends on season'
@@ -330,6 +457,7 @@ Active profile(s) configuration:
         expect_stdout = """
 # BASH SOURCE
 export _ENV_CONFIG_PROFILES=tng
+export _ENV_CONFIG_VARS='PICARD RIKER'
 export PICARD=captain
 export RIKER=number1
 """
