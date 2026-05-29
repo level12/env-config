@@ -104,6 +104,8 @@ def env_config(
         if is_update and not is_show:
             active_profiles = list(dict.fromkeys([*current_profiles, *profiles]))
 
+        profiles_to_apply = active_profiles if is_update and not is_show else profiles
+
         if not is_update and not is_show:
             clear_profiles = None if is_clear else current_profiles
             present_vars = sorted(envconf.present_env_vars(clear_profiles))
@@ -122,13 +124,13 @@ def env_config(
         print_err(
             'Active profile(s) configuration:' if is_show else 'Setting:',
         )
-        for var, value in envconf.select(profiles).items():
+        for var, value in envconf.select(profiles_to_apply).items():
             # Print to stderr for the user to see what's happening and keep stdout for the shell to
             # source
             print_err(f'    {var}:', value)
 
         if not is_debug and not is_show:
-            envconf.set(profiles, active_names=active_profiles)
+            envconf.set(profiles_to_apply, active_names=active_profiles)
     except UserError as e:
         ctx.fail(str(e))
 

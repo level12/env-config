@@ -94,6 +94,8 @@ class TestEnvConfig:
         ec = load('basics.yaml')
 
         assert ec.resolve(['aws-cli']) == {
+            'AWS_ACCESS_KEY_ID': 'fake',
+            'AWS_SECRET_ACCESS_KEY': 'fake',
             'AWS_IGNORE_CONFIGURED_ENDPOINT_URLS': 'true',
         }
 

@@ -74,20 +74,32 @@ class EnvConfig:
             if prof_name in prof_names
         }
 
-    def selected_env_var_names(self, selected_names: list[str]) -> set[str]:
-        known_names = set(self.config.profile) | set(self.config.group)
-        selected_names = [name for name in selected_names if name in known_names]
-        if not selected_names:
-            return set()
+    def known_names(self) -> set[str]:
+        return set(self.config.profile) | set(self.config.group)
 
-        return set(self.select(selected_names))
+    def configured_env_var_names(self) -> set[str]:
+        return {var_name for var_map in self.config.profile.values() for var_name in var_map}
+
+    def selected_configs(self, selected_names: list[str]) -> dict[str, dict]:
+        return self.select_groups(selected_names) | self.select_profiles(selected_names)
+
+    def selected_env_var_names(self, selected_names: list[str]) -> set[str]:
+        known_names = self.known_names()
+        if any(name not in known_names for name in selected_names):
+            return self.configured_env_var_names()
+
+        return {
+            env_name
+            for env_map in self.selected_configs(selected_names).values()
+            for env_name in env_map
+        }
 
     def present_env_vars(self, selected_names: list[str] | None = None) -> set[str]:
         """Return configured env var names that are currently present."""
         env_var_names = (
             self.selected_env_var_names(selected_names)
             if selected_names is not None
-            else {var_name for var_map in self.config.profile.values() for var_name in var_map}
+            else self.configured_env_var_names()
         )
         return {var_name for var_name in env_var_names if var_name in environ}
 
@@ -105,7 +117,7 @@ class EnvConfig:
         }
 
     def validate_selected_names(self, selected_names: list[str]) -> None:
-        known_names = set(self.config.profile) | set(self.config.group)
+        known_names = self.known_names()
         for name in selected_names:
             if name not in known_names:
                 raise UserError(f'Unknown env-config profile or group: {name}')
@@ -114,8 +126,7 @@ class EnvConfig:
         """
         Return all env name to value mappings in given selection names after resolving includes.
         """
-        self.validate_selected_names(selected_names)
-        merged = self.select_groups(selected_names) | self.select_profiles(selected_names)
+        merged = self.selected_configs(selected_names)
         return {
             env_name: env_value
             for env_map in merged.values()

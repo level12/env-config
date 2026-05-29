@@ -153,6 +153,37 @@ Setting:
             AWS_SECRET_ACCESS_KEY='from-mise',
         )
 
+    def test_switch_clears_configured_vars_when_current_profile_is_stale(self):
+        expect_stdout = """
+# FISH SOURCE
+set -eg AWS_ACCESS_KEY_ID
+set -eg AWS_SECRET_ACCESS_KEY
+set -eg _ENV_CONFIG_PROFILES
+# FISH SOURCE
+set -gx _ENV_CONFIG_PROFILES tng
+set -gx PICARD captain
+set -gx RIKER number1
+"""
+
+        expect_stderr = """
+Clearing:
+     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+Profiles active: tng
+Setting:
+    PICARD: captain
+    RIKER: number1
+"""
+
+        self.check_invoke(
+            'basics.yaml',
+            'tng',
+            expect_stdout=expect_stdout,
+            expect_stderr=expect_stderr,
+            _ENV_CONFIG_PROFILES='legacy-aws',
+            AWS_ACCESS_KEY_ID='from-prev-ec',
+            AWS_SECRET_ACCESS_KEY='from-prev-ec',
+        )
+
     def test_update(self):
         expect_stdout = """
 # FISH SOURCE
@@ -184,6 +215,7 @@ Setting:
 set -gx _ENV_CONFIG_PROFILES 'ds9 tng'
 set -gx PICARD captain
 set -gx RIKER number1
+set -gx SISKO 'depends on season'
 """
 
         expect_stderr = """
@@ -191,6 +223,7 @@ Profiles active: ds9 tng
 Setting:
     PICARD: captain
     RIKER: number1
+    SISKO: depends on season
 """
 
         self.check_invoke(
@@ -200,7 +233,34 @@ Setting:
             expect_stdout=expect_stdout,
             expect_stderr=expect_stderr,
             _ENV_CONFIG_PROFILES='ds9',
-            SISKO='depends on season',
+        )
+
+    def test_update_refreshes_all_active_profiles(self):
+        expect_stdout = """
+# FISH SOURCE
+set -gx _ENV_CONFIG_PROFILES 'ds9 tng'
+set -gx PICARD captain
+set -gx RIKER number1
+set -gx SISKO 'depends on season'
+"""
+
+        expect_stderr = """
+Profiles active: ds9 tng
+Setting:
+    PICARD: captain
+    RIKER: number1
+    SISKO: depends on season
+"""
+
+        self.check_invoke(
+            'basics.yaml',
+            'ds9',
+            '--update',
+            expect_stdout=expect_stdout,
+            expect_stderr=expect_stderr,
+            _ENV_CONFIG_PROFILES='ds9 tng',
+            SISKO='stale',
+            RIKER='stale',
         )
 
     def test_list_profiles(self):
