@@ -144,9 +144,11 @@ class FishEnvConfig(EnvConfig):
 
         print('set', '-eg', '_ENV_CONFIG_PROFILES')
 
-    def set(self, selected_names: list[str]):
+    def set(self, selected_names: list[str], *, active_names: list[str] | None = None):
+        active_names = active_names or selected_names
+
         print('# FISH SOURCE')
-        print('set', '-gx', '_ENV_CONFIG_PROFILES', shlex.quote(' '.join(selected_names)))
+        print('set', '-gx', '_ENV_CONFIG_PROFILES', shlex.quote(' '.join(active_names)))
         for var, value in self.resolve(selected_names).items():
             # Fish puts sourced variables in their own local scope by default so use -g to get them
             # to the scope of the sourcing shell and -x to export them.
@@ -165,8 +167,10 @@ class BashEnvConfig(EnvConfig):
 
         print('unset', '_ENV_CONFIG_PROFILES')
 
-    def set(self, selected_names: list[str]):
+    def set(self, selected_names: list[str], *, active_names: list[str] | None = None):
+        active_names = active_names or selected_names
+
         print('# BASH SOURCE')
-        print('export', '_ENV_CONFIG_PROFILES=' + shlex.quote(' '.join(selected_names)))
+        print('export', '_ENV_CONFIG_PROFILES=' + shlex.quote(' '.join(active_names)))
         for var, value in self.resolve(selected_names).items():
             print('export', shlex.quote(var) + '=' + shlex.quote(value))

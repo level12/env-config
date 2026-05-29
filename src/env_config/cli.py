@@ -97,6 +97,11 @@ def env_config(
                 print_err('No env-config profiles currently in use.')
                 return
 
+        active_profiles = profiles
+        if is_update and not is_show:
+            current_profiles = environ.get('_ENV_CONFIG_PROFILES', '').strip().split()
+            active_profiles = list(dict.fromkeys([*current_profiles, *profiles]))
+
         if not is_update and not is_show:
             present_vars = sorted(envconf.present_env_vars())
             print_err('Clearing:')
@@ -110,7 +115,7 @@ def env_config(
         if is_clear:
             return
 
-        print_err('Profiles active:', ' '.join(profiles))
+        print_err('Profiles active:', ' '.join(active_profiles))
         print_err(
             'Active profile(s) configuration:' if is_show else 'Setting:',
         )
@@ -120,7 +125,7 @@ def env_config(
             print_err(f'    {var}:', value)
 
         if not is_debug and not is_show:
-            envconf.set(profiles)
+            envconf.set(profiles, active_names=active_profiles)
     except UserError as e:
         ctx.fail(str(e))
 

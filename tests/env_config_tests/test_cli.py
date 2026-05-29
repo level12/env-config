@@ -150,11 +150,37 @@ Setting:
             RIKER='number2',
         )
 
+    def test_update_appends_profiles(self):
+        expect_stdout = """
+# FISH SOURCE
+set -gx _ENV_CONFIG_PROFILES 'ds9 tng'
+set -gx PICARD captain
+set -gx RIKER number1
+"""
+
+        expect_stderr = """
+Profiles active: ds9 tng
+Setting:
+    PICARD: captain
+    RIKER: number1
+"""
+
+        self.check_invoke(
+            'basics.yaml',
+            'tng',
+            '--update',
+            expect_stdout=expect_stdout,
+            expect_stderr=expect_stderr,
+            _ENV_CONFIG_PROFILES='ds9',
+            SISKO='depends on season',
+        )
+
     def test_list_profiles(self):
         expect_stdout = """
 Profiles:
     tng
     ds9
+    aws-cli
 Groups:
     starfleet
 """
