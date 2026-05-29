@@ -111,6 +111,7 @@ Setting:
             'tng',
             expect_stdout=expect_stdout,
             expect_stderr=expect_stderr,
+            _ENV_CONFIG_PROFILES='tng ds9',
             SISKO='foo',
             RIKER='number2',
         )
@@ -121,8 +122,35 @@ Setting:
             '--debug',
             expect_stdout='',
             expect_stderr=expect_stderr,
+            _ENV_CONFIG_PROFILES='tng ds9',
             SISKO='foo',
             RIKER='number2',
+        )
+
+    def test_switch_does_not_clear_unmanaged_configured_vars(self):
+        expect_stdout = """
+# FISH SOURCE
+set -gx _ENV_CONFIG_PROFILES tng
+set -gx PICARD captain
+set -gx RIKER number1
+"""
+
+        expect_stderr = """
+Clearing:
+     No configured vars present to clear.
+Profiles active: tng
+Setting:
+    PICARD: captain
+    RIKER: number1
+"""
+
+        self.check_invoke(
+            'basics.yaml',
+            'tng',
+            expect_stdout=expect_stdout,
+            expect_stderr=expect_stderr,
+            AWS_ACCESS_KEY_ID='from-mise',
+            AWS_SECRET_ACCESS_KEY='from-mise',
         )
 
     def test_update(self):

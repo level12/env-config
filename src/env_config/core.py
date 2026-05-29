@@ -74,14 +74,22 @@ class EnvConfig:
             if prof_name in prof_names
         }
 
-    def present_env_vars(self) -> set[str]:
-        """Return all env var names used in any config active in current environment"""
-        return {
-            var_name
-            for var_map in self.config.profile.values()
-            for var_name in var_map
-            if var_name in environ
-        }
+    def selected_env_var_names(self, selected_names: list[str]) -> set[str]:
+        known_names = set(self.config.profile) | set(self.config.group)
+        selected_names = [name for name in selected_names if name in known_names]
+        if not selected_names:
+            return set()
+
+        return set(self.select(selected_names))
+
+    def present_env_vars(self, selected_names: list[str] | None = None) -> set[str]:
+        """Return configured env var names that are currently present."""
+        env_var_names = (
+            self.selected_env_var_names(selected_names)
+            if selected_names is not None
+            else {var_name for var_map in self.config.profile.values() for var_name in var_map}
+        )
+        return {var_name for var_name in env_var_names if var_name in environ}
 
     def select_groups(self, group_names: list[str]) -> dict[str, dict]:
         """Select profiles included in the given groups"""
@@ -140,8 +148,8 @@ class EnvConfig:
 
 
 class FishEnvConfig(EnvConfig):
-    def clear_present_env_vars(self):
-        var_names = sorted(self.present_env_vars())
+    def clear_present_env_vars(self, selected_names: list[str] | None = None):
+        var_names = sorted(self.present_env_vars(selected_names))
         if not var_names:
             return
 
@@ -163,8 +171,8 @@ class FishEnvConfig(EnvConfig):
 
 
 class BashEnvConfig(EnvConfig):
-    def clear_present_env_vars(self):
-        var_names = sorted(self.present_env_vars())
+    def clear_present_env_vars(self, selected_names: list[str] | None = None):
+        var_names = sorted(self.present_env_vars(selected_names))
         if not var_names:
             return
 

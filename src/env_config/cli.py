@@ -99,20 +99,21 @@ def env_config(
 
         envconf.validate_selected_names(profiles)
 
+        current_profiles = environ.get('_ENV_CONFIG_PROFILES', '').strip().split()
         active_profiles = profiles
         if is_update and not is_show:
-            current_profiles = environ.get('_ENV_CONFIG_PROFILES', '').strip().split()
             active_profiles = list(dict.fromkeys([*current_profiles, *profiles]))
 
         if not is_update and not is_show:
-            present_vars = sorted(envconf.present_env_vars())
+            clear_profiles = None if is_clear else current_profiles
+            present_vars = sorted(envconf.present_env_vars(clear_profiles))
             print_err('Clearing:')
             if present_vars:
                 print_err('    ', ', '.join(present_vars))
             else:
                 print_err('    ', 'No configured vars present to clear.')
             if not is_debug:
-                envconf.clear_present_env_vars()
+                envconf.clear_present_env_vars(clear_profiles)
 
         if is_clear:
             return
