@@ -85,6 +85,14 @@ def current_version(current: str | None) -> Version:
     return Version.load()
 
 
+def assert_nondirty() -> None:
+    result = sub_run('git', 'status', '--porcelain', capture=True)
+    lines = [line for line in result.stdout.splitlines() if line and not line.startswith('??')]
+    if lines:
+        msg = 'Git working directory is not clean. Use --allow-dirty to bypass this check.'
+        raise click.ClickException(msg)
+
+
 def save_version(previous: Version, current: Version) -> None:
     current.save()
     sub_run('git', 'add', current.version_fpath)
@@ -96,9 +104,17 @@ def save_version(previous: Version, current: Version) -> None:
 @click.argument('kind', type=click.Choice(('micro', 'minor', 'major', 'date')), default='date')
 @click.option('--show', is_flag=True, help="Only show next version, don't bump (date only)")
 @click.option('--current', help='Simulate current version (date only)')
+@click.option('--allow-dirty', is_flag=True, help='Allow bumping from a dirty git working tree')
 @click.option('--push/--no-push', help='Push after bump', default=True)
 @click.pass_context
-def main(ctx: click.Context, kind: str, show: bool, current: str | None, push: bool):
+def main(
+    ctx: click.Context,
+    kind: str,
+    show: bool,
+    current: str | None,
+    allow_dirty: bool,
+    push: bool,
+):
     """
     Bump the version and (by default) git push including tags.
 
@@ -131,6 +147,9 @@ def main(ctx: click.Context, kind: str, show: bool, current: str | None, push: b
         click.echo(f'Current: {current_version_}')
         click.echo(f'Next: {version}')
         return
+
+    if not allow_dirty:
+        assert_nondirty()
 
     save_version(previous, version)
     if push:

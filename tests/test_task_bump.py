@@ -56,7 +56,53 @@ class TestBumpTask:
             mock.patch.object(bump_mod.Version, 'save', autospec=True) as m_save,
             mock.patch.object(bump_mod, 'sub_run') as m_sub_run,
         ):
+            m_sub_run.return_value.stdout = ''
             result = CliRunner().invoke(bump_mod.main, ['major'], catch_exceptions=False)
+
+        assert result.output == ''
+        saved = m_save.call_args.args[0]
+        assert saved == bump_mod.Version(1, 0, 0)
+        assert saved.version_fpath == previous.version_fpath
+        assert m_sub_run.call_args_list == [
+            mock.call('git', 'status', '--porcelain', capture=True),
+            mock.call('git', 'add', previous.version_fpath),
+            mock.call('git', 'commit', '-m', 'Bump version 0.20250626.2 → 1.0.0'),
+            mock.call('git', 'tag', '-a', 'v1.0.0', '-m', 'v1.0.0'),
+            mock.call('git', 'push', '--follow-tags'),
+        ]
+
+    def test_dirty_repo_aborts(self, bump_mod, tmp_path: Path):
+        previous = bump_mod.Version(0, 20250626, 2, version_fpath=tmp_path / 'version.py')
+
+        with (
+            mock.patch.object(bump_mod.Version, 'load', return_value=previous),
+            mock.patch.object(bump_mod.Version, 'save', autospec=True) as m_save,
+            mock.patch.object(bump_mod, 'sub_run') as m_sub_run,
+        ):
+            m_sub_run.return_value.stdout = ' M readme.md\n?? scratch.txt\n'
+            result = CliRunner().invoke(bump_mod.main, ['major'])
+
+        assert result.exit_code == 1
+        assert 'Git working directory is not clean.' in result.output
+        assert '--allow-dirty' in result.output
+        assert ' M readme.md' not in result.output
+        assert 'scratch.txt' not in result.output
+        m_save.assert_not_called()
+        assert m_sub_run.call_args_list == [mock.call('git', 'status', '--porcelain', capture=True)]
+
+    def test_allow_dirty_skips_check(self, bump_mod, tmp_path: Path):
+        previous = bump_mod.Version(0, 20250626, 2, version_fpath=tmp_path / 'version.py')
+
+        with (
+            mock.patch.object(bump_mod.Version, 'load', return_value=previous),
+            mock.patch.object(bump_mod.Version, 'save', autospec=True) as m_save,
+            mock.patch.object(bump_mod, 'sub_run') as m_sub_run,
+        ):
+            result = CliRunner().invoke(
+                bump_mod.main,
+                ['major', '--allow-dirty'],
+                catch_exceptions=False,
+            )
 
         assert result.output == ''
         saved = m_save.call_args.args[0]
