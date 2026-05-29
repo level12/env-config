@@ -89,7 +89,7 @@ def save_version(previous: Version, current: Version) -> None:
     current.save()
     sub_run('git', 'add', current.version_fpath)
     sub_run('git', 'commit', '-m', f'Bump version {previous} → {current}')
-    sub_run('git', 'tag', f'v{current}')
+    sub_run('git', 'tag', '-a', f'v{current}', '-m', f'v{current}')
 
 
 @click.command()

@@ -32,7 +32,7 @@ jobs:
       id-token: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     # https://docs.astral.sh/uv/guides/integration/github/#setting-up-python
     - name: Install uv
@@ -42,7 +42,7 @@ jobs:
         cache-dependency-glob: "uv.lock"
 
     - name: "Set up Python"
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version-file: "pyproject.toml"
 

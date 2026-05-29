@@ -65,6 +65,6 @@ class TestBumpTask:
         assert m_sub_run.call_args_list == [
             mock.call('git', 'add', previous.version_fpath),
             mock.call('git', 'commit', '-m', 'Bump version 0.20250626.2 → 1.0.0'),
-            mock.call('git', 'tag', 'v1.0.0'),
+            mock.call('git', 'tag', '-a', 'v1.0.0', '-m', 'v1.0.0'),
             mock.call('git', 'push', '--follow-tags'),
         ]
