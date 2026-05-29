@@ -96,11 +96,18 @@ class EnvConfig:
             for included_prof_name in includes
         }
 
-    def select(cls, selected_names: list[str]) -> dict[str, str]:
+    def validate_selected_names(self, selected_names: list[str]) -> None:
+        known_names = set(self.config.profile) | set(self.config.group)
+        for name in selected_names:
+            if name not in known_names:
+                raise UserError(f'Unknown env-config profile or group: {name}')
+
+    def select(self, selected_names: list[str]) -> dict[str, str]:
         """
         Return all env name to value mappings in given selection names after resolving includes.
         """
-        merged = cls.select_groups(selected_names) | cls.select_profiles(selected_names)
+        self.validate_selected_names(selected_names)
+        merged = self.select_groups(selected_names) | self.select_profiles(selected_names)
         return {
             env_name: env_value
             for env_map in merged.values()

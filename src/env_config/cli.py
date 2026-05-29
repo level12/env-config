@@ -97,6 +97,8 @@ def env_config(
                 print_err('No env-config profiles currently in use.')
                 return
 
+        envconf.validate_selected_names(profiles)
+
         active_profiles = profiles
         if is_update and not is_show:
             current_profiles = environ.get('_ENV_CONFIG_PROFILES', '').strip().split()

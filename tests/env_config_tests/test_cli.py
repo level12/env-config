@@ -224,6 +224,20 @@ Active profile(s) configuration:
         assert error.startswith('Usage: env-config')
         assert error.endswith('/fake.not-yaml should be a directory or .yaml file')
 
+    def test_invalid_profile_or_group_name_errors(self):
+        result = invoke(
+            'basics.yaml',
+            'tng',
+            'foo',
+            env={'ENV_CONFIG_SHELL': 'fish'},
+            exit_code=2,
+        )
+
+        assert result.stdout == ''
+        error = result.stderr.strip()
+        assert error.startswith('Usage: env-config')
+        assert error.endswith('Unknown env-config profile or group: foo')
+
     def test_bash_exports(self):
         expect_stdout = """
 # BASH SOURCE
