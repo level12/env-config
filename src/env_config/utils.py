@@ -4,6 +4,7 @@ import datetime as dt
 import hashlib
 from os import environ
 from pathlib import Path
+import platform
 import subprocess
 import sys
 import tempfile
@@ -60,6 +61,19 @@ def op_read(uri: str):
     return sub_run('op', *acct_args, 'read', '-n', uri, capture=True).stdout
 
 
+def machine_ident_mac():
+    result = sub_run('ioreg', '-d2', '-c', 'IOPlatformExpertDevice', capture=True)
+    for line in result.stdout.splitlines():
+        if 'IOPlatformUUID' not in line:
+            continue
+
+        parts = line.split('"')
+        if len(parts) > 3:
+            return parts[3]
+
+    raise RuntimeError('Could not determine macOS machine ID')
+
+
 def machine_ident():
     """
     Return a deterministic value based on the current machine's hardware and OS.
@@ -68,6 +82,9 @@ def machine_ident():
     Predictible but just trying to keep a rogue app on the dev's system from scraping creds
     from a plain text file.  Should be using a dedicated not-important account for testing anyway.
     """
+    if platform.system() == 'Darwin':
+        return machine_ident_mac()
+
     etc_mid = Path('/etc/machine-id')
     dbus_mid = Path('/var/lib/dbus/machine-id')
     return (etc_mid.read_text() if etc_mid.exists() else dbus_mid.read_text()).strip()

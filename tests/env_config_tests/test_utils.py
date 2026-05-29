@@ -1,3 +1,7 @@
+import sys
+
+import pytest
+
 from env_config import utils
 from env_config_tests.libs.testing import patch_obj
 
@@ -42,3 +46,19 @@ class TestOPRead:
             'op://private/run about/phasers',
             capture=True,
         )
+
+
+class TestMachineIdent:
+    @patch_obj(utils.platform, 'system', return_value='Darwin')
+    @patch_obj(utils, 'machine_ident_mac', return_value='mac-id')
+    def test_calls_mac_impl_on_macos(self, m_machine_ident_mac, m_platform_system):
+        assert utils.machine_ident() == 'mac-id'
+
+        m_platform_system.assert_called_once_with()
+        m_machine_ident_mac.assert_called_once_with()
+
+    @pytest.mark.skipif(sys.platform != 'darwin', reason='macOS only')
+    def test_mac_impl_real(self):
+        value = utils.machine_ident_mac()
+        assert isinstance(value, str)
+        assert value
