@@ -214,8 +214,8 @@ using different profiles to use a different provider for each account.
 It's also possible you'd prefer to use AWS credentials in multiple shells without having to set them
 all up individually.  EC has support for these scenarios by acting as an AWS credential process.
 
-The following `~/.aws/config` demonstrates a profile that uses `env-config-aws` to generate and
-cache temporary session credentials for the profile:
+The following `~/.aws/config` demonstrates a source profile that uses `env-config-aws` to generate
+and cache temporary session credentials, plus a second profile that assumes a role from it:
 
 ```ini
 [profile starfleet]
@@ -238,17 +238,21 @@ credential_process = env-config-aws starfleet
 # and, when using MFA, a one-time password which was created for the mfa_serial listed in this profile
 # Note that the first segment, "starfleet," is translated to an account.
 envconfig_1pass = op://starfleet/Employee/aws-starfleet/
+
+[profile vulcan]
+region = us-east-2
+role_arn = arn:aws:iam::0987654321:role/allies
+source_profile = starfleet
 ```
 
-That profile can then be used without setting any environment variables:
+`credential_process` belongs on the source profile (`starfleet`), not the role profile
+(`vulcan`). AWS tools use the source profile to get credentials, then assume the configured role.
+
+Those profiles can then be used without setting any environment variables:
 
 ```fish
  ❯ aws sts get-caller-identity --profile starfleet
-{
-    "UserId": "AIDAJ5RS5OWI4EKSDABC",
-    "Account": "12345678910",
-    "Arn": "arn:aws:iam::12345678910:user/jpicard"
-}
+ ❯ aws sts get-caller-identity --profile vulcan
 ```
 
 env-config can be used to set the profile at the environment level:
@@ -257,24 +261,19 @@ env-config can be used to set the profile at the environment level:
 profile:
   starfleet:
     AWS_PROFILE: starfleet
-  starfleet-dev:
-    AWS_PROFILE: starfleet-dev
+  vulcan:
+    AWS_PROFILE: vulcan
 ```
 
 ```fish
- ❯ env-config starfleet
+ ❯ env-config vulcan
 ...
-Profiles active: starfleet
+Profiles active: vulcan
 Setting:
-    AWS_PROFILE: starfleet
+    AWS_PROFILE: vulcan
 ...
 
  ❯ aws sts get-caller-identity
-{
-    "UserId": "AIDAJ5RS5OWI4EKSDABC",
-    "Account": "12345678910",
-    "Arn": "arn:aws:iam::12345678910:user/jpicard"
-}
 ```
 
 `env-config-aws` caches the temporary session credentials in a local file to avoid the 1Pass + HTTP
