@@ -130,6 +130,28 @@ class EnvConfig:
             if name not in known_names:
                 raise UserError(f'Unknown env-config profile or group: {name}')
 
+    def selected_env_maps_in_order(self, selected_names: list[str]) -> list[dict[str, str | bool]]:
+        """Return selected env maps in CLI order.
+
+        Profile tokens win over same-name groups.
+        """
+        env_maps: list[dict[str, str | bool]] = []
+
+        for name in selected_names:
+            if name in self.config.profile:
+                env_maps.append(self.config.profile[name])
+                continue
+
+            for included_prof_name in self.config.group[name]:
+                if included_prof_name not in self.config.profile:
+                    raise UserError(
+                        f'Group {name!r} references missing profile {included_prof_name!r}',
+                    )
+
+                env_maps.append(self.config.profile[included_prof_name])
+
+        return env_maps
+
     def select(self, selected_names: list[str]) -> dict[str, str]:
         """
         Return all env name to value mappings in given selection names after resolving includes.
@@ -140,6 +162,14 @@ class EnvConfig:
             for env_map in merged.values()
             for env_name, env_value in env_map.items()
         }
+
+    def select_in_order(self, selected_names: list[str]) -> dict[str, str | bool]:
+        merged: dict[str, str | bool] = {}
+
+        for env_map in self.selected_env_maps_in_order(selected_names):
+            merged.update(env_map)
+
+        return merged
 
     @classmethod
     def resolve_value(cls, env_name: str, value: str | bool) -> str:
@@ -159,6 +189,14 @@ class EnvConfig:
         any "special" config values that need processing/resolving.
         """
         env_vars: dict[str, str] = self.select(selected_names)
+
+        for name in env_vars:
+            env_vars[name] = self.resolve_value(name, env_vars[name])
+
+        return env_vars
+
+    def resolve_in_order(self, selected_names: list[str]) -> dict[str, str]:
+        env_vars = self.select_in_order(selected_names)
 
         for name in env_vars:
             env_vars[name] = self.resolve_value(name, env_vars[name])

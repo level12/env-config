@@ -1,11 +1,23 @@
 from pathlib import Path
+import sys
+from unittest import mock
 
 from click.testing import CliRunner, Result
+import pytest
 
+from env_config import cli
+from env_config import run as run_mod
 from env_config.cli import ENVVAR_PREFIX, env_config, env_config_shell
+from env_config_tests.libs.testing import patch_obj
 
 
 configs = Path(__file__).parent / 'configs'
+
+
+def invoke_run(*args, **kwargs) -> Result:
+    kwargs.setdefault('catch_exceptions', False)
+    runner = CliRunner()
+    return runner.invoke(cli.env_config_run, args, **kwargs)
 
 
 def invoke_shell(*args, **kwargs) -> Result:
@@ -34,6 +46,167 @@ class TestEnvConfigShell:
     def test_fish(self):
         result = invoke_shell('fish')
         assert 'function env-config' in result.stdout
+
+
+class TestEnvConfigRun:
+    @pytest.fixture(autouse=True)
+    def fixture_config(self, tmp_path: Path):
+        self.config_fpath = tmp_path / 'env-config.yaml'
+        self.config_fpath.write_text(
+            """profile:
+  tng:
+    PICARD: captain
+    SHARED: tng
+  ds9:
+    SISKO: emissary
+    SHARED: ds9
+  stack:
+    SHARED: profile-stack
+  override:
+    SHARED: override
+group:
+  squad:
+    - tng
+    - ds9
+  stack:
+    - ds9
+""",
+        )
+
+    @patch_obj(run_mod.subprocess, 'call', return_value=0)
+    def test_execs_child_with_cli_ordered_env(self, m_subprocess_call):
+        with mock.patch.dict(
+            cli.environ,
+            {
+                'EXISTING': 'present',
+                '_ENV_CONFIG_PROFILES': 'legacy',
+                '_ENV_CONFIG_VARS': 'OLD',
+            },
+            clear=True,
+        ):
+            result = invoke_run(
+                '--config',
+                self.config_fpath.as_posix(),
+                'squad',
+                'override',
+                '--',
+                'cmd',
+                '--flag',
+            )
+
+        assert result.exit_code == 0
+        m_subprocess_call.assert_called_once()
+        argv = m_subprocess_call.call_args.args[0]
+        child_env = m_subprocess_call.call_args.kwargs['env']
+        assert argv == ['cmd', '--flag']
+        assert child_env == {
+            'EXISTING': 'present',
+            'PICARD': 'captain',
+            'SHARED': 'override',
+            'SISKO': 'emissary',
+        }
+
+    @patch_obj(run_mod.subprocess, 'call', return_value=0)
+    def test_profile_name_wins_over_group_for_same_token(self, m_subprocess_call):
+        result = invoke_run(
+            '--config',
+            self.config_fpath.as_posix(),
+            'stack',
+            '--',
+            'cmd',
+        )
+
+        assert result.exit_code == 0
+        child_env = m_subprocess_call.call_args.kwargs['env']
+        assert child_env['SHARED'] == 'profile-stack'
+        assert 'SISKO' not in child_env
+
+    @patch_obj(run_mod.subprocess, 'call', return_value=0)
+    def test_preserves_double_dash_in_child_command(self, m_subprocess_call):
+        result = invoke_run(
+            '--config',
+            self.config_fpath.as_posix(),
+            'tng',
+            '--',
+            'cmd',
+            '--',
+            'arg',
+        )
+
+        assert result.exit_code == 0
+        assert m_subprocess_call.call_args.args[0] == ['cmd', '--', 'arg']
+
+    @patch_obj(run_mod.subprocess, 'call', return_value=0)
+    def test_parent_environment_is_not_mutated(self, m_subprocess_call):
+        with mock.patch.dict(
+            cli.environ,
+            {
+                'EXISTING': 'present',
+                '_ENV_CONFIG_PROFILES': 'legacy',
+                '_ENV_CONFIG_VARS': 'OLD',
+            },
+            clear=True,
+        ):
+            result = invoke_run('--config', self.config_fpath.as_posix(), 'tng', '--', 'cmd')
+
+            assert result.exit_code == 0
+            assert cli.environ == {
+                'EXISTING': 'present',
+                '_ENV_CONFIG_PROFILES': 'legacy',
+                '_ENV_CONFIG_VARS': 'OLD',
+            }
+
+        m_subprocess_call.assert_called_once()
+
+    def test_requires_separator(self):
+        result = invoke_run('--config', self.config_fpath.as_posix(), 'tng', 'cmd')
+
+        assert result.exit_code == 2
+        err = result.stderr.strip()
+        assert err.startswith('Usage: env-config-run')
+        assert err.endswith("Missing '--' separator before command")
+
+    def test_requires_command_after_separator(self):
+        result = invoke_run('--config', self.config_fpath.as_posix(), 'tng', '--')
+
+        assert result.exit_code == 2
+        err = result.stderr.strip()
+        assert err.endswith('Missing command after --')
+
+    def test_rejects_debug_option(self):
+        result = invoke_run('--debug')
+
+        assert result.exit_code == 2
+        assert "No such option '--debug'" in result.stderr.strip()
+
+    @patch_obj(run_mod.subprocess, 'call', side_effect=FileNotFoundError)
+    def test_missing_executable_errors(self, m_subprocess_call):
+        result = invoke_run('--config', self.config_fpath.as_posix(), 'tng', '--', 'missing-cmd')
+
+        assert result.exit_code == 1
+        assert result.stderr.strip() == 'Error: Command not found: missing-cmd'
+        m_subprocess_call.assert_called_once()
+
+    @patch_obj(run_mod.subprocess, 'call')
+    def test_unknown_profile_errors_before_launch(self, m_subprocess_call):
+        result = invoke_run('--config', self.config_fpath.as_posix(), 'unknown', '--', 'cmd')
+
+        assert result.exit_code == 1
+        assert result.stderr.strip() == 'Error: Unknown env-config profile or group: unknown'
+        m_subprocess_call.assert_not_called()
+
+    def test_child_exit_code_is_returned(self):
+        result = invoke_run(
+            '--config',
+            self.config_fpath.as_posix(),
+            'tng',
+            '--',
+            sys.executable,
+            '-c',
+            'import sys; sys.exit(7)',
+        )
+
+        assert result.exit_code == 7
 
 
 class TestEnvConfig:

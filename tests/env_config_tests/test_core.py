@@ -115,6 +115,31 @@ class TestEnvConfig:
             'AWS_IGNORE_CONFIGURED_ENDPOINT_URLS': 'true',
         }
 
+    def test_resolve_in_order_uses_cli_selection_order(self, tmp_path: Path):
+        config_fpath = tmp_path / 'env-config.yaml'
+        config_fpath.write_text(
+            """profile:
+  one:
+    SHARED: one
+  two:
+    SHARED: two
+  same:
+    SHARED: profile-same
+group:
+  squad:
+    - one
+    - two
+  same:
+    - two
+""",
+        )
+
+        ec = core.EnvConfig(config.load(config_fpath))
+
+        assert ec.resolve_in_order(['squad']) == {'SHARED': 'two'}
+        assert ec.resolve_in_order(['squad', 'one']) == {'SHARED': 'one'}
+        assert ec.resolve_in_order(['same']) == {'SHARED': 'profile-same'}
+
 
 class TestOPResolver:
     @patch_obj(core.utils, 'op_read', return_value='Q')

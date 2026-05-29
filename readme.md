@@ -134,6 +134,35 @@ Fish: sourced env-config commands from stdout
 
 ```
 
+## env-config-run
+
+Use `env-config-run` to run a command with env vars from one or more profiles without changing the
+current shell environment.
+
+Basic form:
+
+```sh
+env-config-run profile-name -- command arg1 arg2
+```
+
+Examples:
+
+```sh
+# Run with one profile
+env-config-run pypi -- python -m build
+
+# Combine multiple profiles; later selections win on conflicts
+env-config-run db-prod api-dev -- pg_dump ...
+```
+
+Notes:
+
+- Use `--` to separate env-config-run arguments from the command you want to run.
+- `env-config-run` inherits the current environment, overlays the selected profile vars, and only
+  applies them to the child process.
+- If your command needs shell expansion after the env vars are injected, run a shell explicitly,
+  e.g. `env-config-run app -- bash -lc 'echo "$MY_VAR"'`.
+
 ## contrib.loader
 
 A Python application can use `env_config.contrib.loader` to give its code access to the same env

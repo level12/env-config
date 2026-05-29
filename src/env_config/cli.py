@@ -7,6 +7,7 @@ import click
 
 from . import aws, config, utils
 from .core import PROFILES_ENVVAR, BashEnvConfig, FishEnvConfig, UserError
+from .run import RunRequest
 
 
 ENVVAR_PREFIX = 'ENV_CONFIG'
@@ -153,6 +154,24 @@ def env_config_aws(aws_profile: str):
     config = aws.profile_config(aws_profile)
     sess_creds = aws.op_sess_creds(config.op_ref_base, config.mfa_serial)
     print(sess_creds.cli_json())
+
+
+@click.command(context_settings={'allow_interspersed_args': False})
+@click.option(
+    '--config',
+    'config_fpath',
+    type=click.Path(dir_okay=False, path_type=Path),
+    help='Default looks for env-config.yaml in CWD & parents',
+)
+@click.argument('args', nargs=-1, type=click.UNPROCESSED, required=True)
+def env_config_run(args: tuple[str, ...], config_fpath: Path | None):
+    """Run a command with env vars from selected env-config profiles."""
+    try:
+        start_at = config_fpath or Path.cwd()
+        request = RunRequest.parse(args)
+        raise SystemExit(request.run(start_at))
+    except UserError as e:
+        raise click.ClickException(str(e)) from e
 
 
 def main():
