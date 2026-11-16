@@ -2,3 +2,6 @@ profile:
   tng:
     PICARD: 'captain'
     RIKER: 'op://'
+  ds9:
+    PICARD: 'admiral'
+    RIKER: 'op://private/ds9/password'

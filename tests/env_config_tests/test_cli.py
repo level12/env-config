@@ -5,7 +5,7 @@ from unittest import mock
 from click.testing import CliRunner, Result
 import pytest
 
-from env_config import cli
+from env_config import cli, utils
 from env_config import run as run_mod
 from env_config.cli import ENVVAR_PREFIX, env_config, env_config_shell
 from env_config_tests.libs.testing import patch_obj
@@ -57,9 +57,11 @@ class TestEnvConfigRun:
   tng:
     PICARD: captain
     SHARED: tng
+    SHARED_OP: op://private/tng/password
   ds9:
     SISKO: emissary
     SHARED: ds9
+    SHARED_OP: op://private/ds9/password
   stack:
     SHARED: profile-stack
   override:
@@ -72,6 +74,43 @@ group:
     - ds9
 """,
         )
+
+    @pytest.fixture(autouse=True)
+    def m_op_read(self):
+        secrets = {
+            'op://private/tng/password': 'tng-secret',
+            'op://private/ds9/password': 'ds9-secret',
+        }
+        with patch_obj(utils, 'op_read', side_effect=secrets.__getitem__) as m_op_read:
+            yield m_op_read
+
+    @patch_obj(run_mod.subprocess, 'call', return_value=0)
+    def test_switch_refreshes_secret(self, m_subprocess_call, m_op_read):
+        parent_env = {
+            '_ENV_CONFIG_PROFILES': 'tng',
+            '_ENV_CONFIG_VARS': 'SHARED_OP',
+            'SHARED_OP': 'tng-secret',
+        }
+        with mock.patch.dict(cli.environ, parent_env, clear=True):
+            result = invoke_run(
+                '--config',
+                self.config_fpath.as_posix(),
+                'ds9',
+                '--',
+                'cmd',
+            )
+
+            assert result.exit_code == 0
+            assert cli.environ == parent_env
+
+        m_subprocess_call.assert_called_once()
+        child_env = m_subprocess_call.call_args.kwargs['env']
+        assert child_env == {
+            'SISKO': 'emissary',
+            'SHARED': 'ds9',
+            'SHARED_OP': 'ds9-secret',
+        }
+        m_op_read.assert_called_once_with('op://private/ds9/password')
 
     @patch_obj(run_mod.subprocess, 'call', return_value=0)
     def test_execs_child_with_cli_ordered_env(self, m_subprocess_call):
@@ -104,6 +143,7 @@ group:
             'PICARD': 'captain',
             'SHARED': 'override',
             'SISKO': 'emissary',
+            'SHARED_OP': 'ds9-secret',
         }
 
     @patch_obj(run_mod.subprocess, 'call', return_value=0)
@@ -302,6 +342,56 @@ Setting:
             SISKO='foo',
             RIKER='number2',
         )
+
+    @pytest.mark.parametrize(
+        ('shell', 'expect_stdout'),
+        [
+            (
+                'fish',
+                """
+# FISH SOURCE
+set -eg PICARD
+set -eg RIKER
+set -eg _ENV_CONFIG_PROFILES
+set -eg _ENV_CONFIG_VARS
+# FISH SOURCE
+set -gx _ENV_CONFIG_PROFILES ds9
+set -gx _ENV_CONFIG_VARS 'PICARD RIKER'
+set -gx PICARD admiral
+set -gx RIKER ds9-secret
+""",
+            ),
+            (
+                'bash',
+                """
+# BASH SOURCE
+unset PICARD
+unset RIKER
+unset _ENV_CONFIG_PROFILES
+unset _ENV_CONFIG_VARS
+# BASH SOURCE
+export _ENV_CONFIG_PROFILES=ds9
+export _ENV_CONFIG_VARS='PICARD RIKER'
+export PICARD=admiral
+export RIKER=ds9-secret
+""",
+            ),
+        ],
+    )
+    @patch_obj(utils, 'op_read', return_value='ds9-secret')
+    def test_switch_refreshes_secret(self, m_op_read, shell, expect_stdout):
+        self.check_invoke(
+            '1pass.yaml',
+            'ds9',
+            shell=shell,
+            expect_stdout=expect_stdout,
+            _ENV_CONFIG_PROFILES='tng',
+            _ENV_CONFIG_VARS='PICARD RIKER',
+            PICARD='captain',
+            RIKER='tng-secret',
+        )
+
+        m_op_read.assert_called_once_with('op://private/ds9/password')
 
     def test_switch_does_not_clear_unmanaged_configured_vars(self):
         expect_stdout = """

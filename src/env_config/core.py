@@ -34,8 +34,10 @@ class OPResolver(Resolver):
 
     @classmethod
     def convert(cls, env_name: str, uri: str) -> str:
-        # Treat operator-provided env overrides literally, including the empty string.
-        if env_name in environ:
+        # Treat operator-provided env overrides literally, including the empty string. Values
+        # env-config itself set previously are stale, not overrides.
+        managed = environ.get(MANAGED_VARS_ENVVAR, '').split()
+        if env_name in environ and env_name not in managed:
             return environ[env_name]
 
         if systemd_creds_dir := environ.get('CREDENTIALS_DIRECTORY'):
